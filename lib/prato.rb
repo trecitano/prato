@@ -19,10 +19,9 @@ require_relative "prato/internal/lazy_context"
 require_relative "prato/internal/query_state"
 require_relative "prato/internal/specification"
 
-require_relative "prato/internal/pipeline/common"
 require_relative "prato/internal/pipeline/filtering"
 require_relative "prato/internal/pipeline/pagination"
-require_relative "prato/internal/pipeline/presenting"
+require_relative "prato/internal/pipeline/serializer"
 require_relative "prato/internal/pipeline/sorting"
 
 require_relative "prato/table"
@@ -35,7 +34,7 @@ module Prato
     Prato::Table.new
   end
 
-  def configure
+  def setup
     Configuration.new
   end
 end

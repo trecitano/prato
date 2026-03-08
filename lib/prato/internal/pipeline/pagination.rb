@@ -6,17 +6,23 @@ module Prato
       module Pagination
         extend self
 
-        def paginate(query_state, page, per_page)
-          records = query_state.records
+        def paginate_query(query_state, config,raw_page, raw_per_page)
+          page = raw_page || 1
+          per_page = raw_per_page || config.default_page_size
+          if per_page > config.maximum_page_size
+            per_page = config.maximum_page_size
+          end
+
+          dataset = query_state.dataset
           offset = (page - 1) * per_page
 
-          paginated_records = if query_state.unmaterialized?
-                                records.offset(offset).limit(per_page)
+          paginated_dataset = if query_state.unmaterialized?
+                                dataset.offset(offset).limit(per_page)
                               else
-                                records.slice(offset, per_page) || []
+                                dataset.slice(offset, per_page) || []
                               end
 
-          query_state.with_records(paginated_records)
+          query_state.with_dataset(paginated_dataset)
         end
       end
     end

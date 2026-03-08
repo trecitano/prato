@@ -6,7 +6,9 @@ module Prato
       module Sorting
         extend self
 
-        def sort(query_state, spec, sorts)
+        def sort_query(query_state, spec, sorts)
+          return query_state if sorts.nil?
+
         end
       end
     end

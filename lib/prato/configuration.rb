@@ -19,7 +19,7 @@ module Prato
     def initialize
       @key_transformation = :camelCase
       @strict_loading_violation = true
-      @parameter_parser = Prato::Query::DefaultParser
+      @parameter_parser = Prato::Query::DefaultParser.new
       @default_page_size = 20
       @maximum_page_size = 100
     end
@@ -33,7 +33,7 @@ module Prato
       @key_transformation = value
     end
 
-    def parameters_parser=(parser)
+    def parameter_parser=(parser)
       unless parser.respond_to?(:parse_parameters)
         raise ArgumentError,
               "parameter_parser must respond to .parse_parameters. Got #{parser.inspect}"

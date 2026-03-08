@@ -3,11 +3,10 @@
 module Prato
   class Table
 
-    attr_reader :spec, :config
+    attr_reader :spec
 
     def initialize
       @spec = Internal::Specification.new
-      @config = Prato::Configuration.config
     end
 
     def column(*args, **kwargs)
@@ -25,13 +24,13 @@ module Prato
       self
     end
 
-    def ruby_sources(**kwargs)
+    def ruby_loaders(**kwargs)
       @spec.inner_context(kwargs)
       self
     end
 
     def configure(config)
-      @config = config
+      @spec.inner_config(config)
       self
     end
 
@@ -39,7 +38,6 @@ module Prato
       Internal::TablePresenter.present_table(
         scope,
         @spec,
-        @config,
         raw_params: params,
         paginated: true
       )
@@ -49,7 +47,6 @@ module Prato
       Internal::TablePresenter.present_table(
         scope,
         @spec,
-        @config,
         raw_params: params,
         paginated: false
       )

@@ -3,10 +3,11 @@
 module Prato
   module Internal
     class Specification
-      attr_reader :columns, :context, :all_column_keys
+      attr_reader :columns, :context, :config
 
-      def initialize()
+      def initialize
         @columns = {}
+        @config = Prato::Configuration.config
         @validated = false
       end
 
@@ -41,7 +42,7 @@ module Prato
         accessor = parse_accessor(key)
         col = ::Prato::Types::RubyColumn.new(id, source: source, key: accessor)
 
-        add_column(id, col)
+        add_column_and_invalidate(id, col)
 
         @columns[id] = col
         @validated = false
@@ -63,14 +64,44 @@ module Prato
         @validated = false
       end
 
-      def validate!
+      def inner_config(config)
+        @config = config
+        @validated = false
+      end
+
+      def validate_and_update_keys!
+        return if @validated
+
+        columns.each do |id, col|
+
+        end
+
+      end
+
+      def all_fields
+        @all_fields ||= extract_fields(columns)
       end
 
       private
 
-      # Parse the name_map which can be:
-      # - A symbol: :id (both id and accessor are :id)
-      # - A hash with one key: { id: :accessor } or { id: { nested: :path } }
+      def add_column_and_invalidate(id, column)
+        @validated = false
+        @all_fields = nil
+
+        @columns[id] = column
+      end
+
+      # Given a list of columns, returns an array of either symbols or arrays of symbols
+      def extract_fields(columns)
+        columns.map do |col|
+          if col.is_a?(Types::Section)
+            extract_fields(col.columns)
+          else
+            col.id
+          end
+        end
+      end
+
       def parse_name_map(name_map)
         case name_map
         when Symbol
@@ -88,9 +119,6 @@ module Prato
         end
       end
 
-      # Parse accessor which can be:
-      # - A symbol: :attribute
-      # - A hash (nested): { association: :attribute } or { association: { nested: :attribute } }
       def parse_accessor(value)
         case value
         when Symbol
@@ -102,9 +130,6 @@ module Prato
         end
       end
 
-      # Recursively flatten nested hash to array path
-      # { financial_transaction: { policy: :poli_policy_num } }
-      # => [:financial_transaction, :policy, :poli_policy_num]
       def flatten_hash_to_array(hash)
         return [] if hash.empty?
 

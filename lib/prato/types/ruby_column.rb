@@ -5,7 +5,7 @@ module Prato
     class RubyColumn
       attr_reader :id
 
-      attr_reader :source
+      attr_reader :loader
 
       attr_reader :key
 
