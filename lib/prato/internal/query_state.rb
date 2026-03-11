@@ -3,7 +3,7 @@
 module Prato
   module Internal
     class QueryState
-      attr_reader :dataset, :ruby_loaders, :applied_scopes, :wrapped_for_computed, :required_columns
+      attr_reader :dataset, :ruby_loaders, :applied_scopes, :wrapped_for_computed, :required_fields
 
       def self.create(base_scope, required_fields)
         dataset = base_scope.dup
@@ -22,7 +22,7 @@ module Prato
       end
 
       def with_dataset(dataset)
-        self.class.new(dataset, ruby_loaders, applied_scopes, wrapped_for_computed, required_columns)
+        self.class.new(dataset, ruby_loaders, applied_scopes, wrapped_for_computed, @required_fields)
       end
 
       def unmaterialized?
@@ -33,12 +33,12 @@ module Prato
         association_paths = association_paths(spec.columns, @required_fields)
         associations = build_associations(association_paths)
 
-        scoped_query_state = apply_necessary_column_scopes(spec.columns, @required_columns)
+        scoped_query_state = apply_necessary_column_scopes(spec.columns, @required_fields)
 
         base_scope = scoped_query_state.dataset
         scope_with_includes = base_scope.includes(associations)
 
-        scope_with_selected_columns = select_columns(scope_with_includes, spec.columns, @required_columns)
+        scope_with_selected_columns = select_columns(scope_with_includes, spec.columns, @required_fields)
 
         records = scope_with_selected_columns.to_a
 
@@ -57,16 +57,11 @@ module Prato
         associations = []
 
         fields.each do |field|
-          key, *rest = field
-          column = columns[key]
+          column = columns[field]
+          next unless column.is_a?(Types::Column)
 
-          if column.is_a?(Type::Section)
-            associations.concat(infer_associations(column.columns, rest))
-          else
-            accessor = column.accessor
-
-            associations << accessor[0..-2] if accessor.is_a?(Array) && accessor.length > 1
-          end
+          accessor = column.accessor
+          associations << accessor[0..-2] if accessor.is_a?(Array) && accessor.length > 1
         end
 
         associations.uniq
@@ -100,12 +95,8 @@ module Prato
         scopes = []
 
         fields.each do |field|
-          key, *rest = field
-          column = columns[key]
-
-          if column.is_a?(Types::Section)
-            scopes.concat(collect_scopes_recursively(column.columns, rest))
-          elsif column.is_a?(Types::Column) && !column.scope.nil?
+          column = columns[field]
+          if column.is_a?(Types::Column) && !column.scope.nil?
             scopes << column.scope
           end
         end
@@ -123,12 +114,12 @@ module Prato
         scope.select(columns_to_select.uniq.join(', '))
       end
 
-      def initialize(dataset, ruby_loaders, applied_scopes, wrapped_for_computed, required_columns)
+      def initialize(dataset, ruby_loaders, applied_scopes, wrapped_for_computed, required_fields)
         @dataset = dataset
         @ruby_loaders = ruby_loaders
         @applied_scopes = applied_scopes
         @wrapped_for_computed = wrapped_for_computed
-        @required_columns = required_columns
+        @required_fields = required_fields
       end
     end
   end

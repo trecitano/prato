@@ -22,8 +22,8 @@ module Prato
       @spec.inner_section(id, &block)
     end
 
-    def ruby_loaders(**kwargs)
-      @spec.inner_ruby_loaders(kwargs)
+    def ruby_loader(id, &block)
+      @spec.inner_ruby_loader(id, &block)
     end
 
     def configure(config)

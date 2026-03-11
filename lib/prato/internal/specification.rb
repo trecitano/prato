@@ -52,9 +52,9 @@ module Prato
         end
 
         name, accessor = parse_name_map(name_map)
-        col = ::Prato::Types::Column.new(accessor, display: display, scope: scope)
+        column = ::Prato::Types::Column.new(accessor, display: display, scope: scope)
 
-        add_draft_column(name, col)
+        @draft_columns << DraftColumn.new(name, column)
       end
 
       def inner_ruby_column(*args, **kwargs)
@@ -70,7 +70,7 @@ module Prato
         accessor = parse_accessor(key)
         column = ::Prato::Types::RubyColumn.new(loader, key: accessor)
 
-        add_draft_column(name, column)
+        @draft_columns << DraftColumn.new(name, column)
       end
 
       def inner_section(id, &block)
@@ -84,18 +84,17 @@ module Prato
 
         section.spec.draft_columns.each do |nested|
           section_name = [id, nested.name]
-          add_draft_column(section_name, nested.column)
+          @draft_columns << DraftColumn.new(section_name, nested.column)
         end
       end
 
-      def inner_ruby_loaders(ruby_loaders)
-        @ruby_loaders = ruby_loaders
-        @validated = false
+      def inner_ruby_loader(id, &block)
+        @ruby_loaders ||= {}
+        @ruby_loaders[id] = block
       end
 
       def inner_config(config)
         @config = config
-        @validated = false
       end
 
       def validate_and_update_keys!
@@ -103,6 +102,7 @@ module Prato
           column_display_id = transform_draft_name(draft, config.key_transformation)
 
           if @columns.key?(column_display_id)
+            validate_ruby_loader!(draft, @loaders)
             raise ArgumentError.new("Column '#{column_display_id}' has already been defined.")
           end
 
@@ -111,8 +111,29 @@ module Prato
         @draft_columns.clear
       end
 
+      def validate_ruby_loader!(draft, loaders)
+        column = draft.column
+        return unless column.is_a?(Prato::Types::RubyColumn)
+
+        loader_name = column.loader
+
+        if loader_name.nil?
+          raise ArgumentError, "Ruby column '#{draft.name || column.key}' is missing a loader."
+        end
+        if loaders.nil?
+          raise ArgumentError, "No ruby loader registered for '#{loader_name}'."
+        end
+        loader = loaders[loader_name]
+        unless loaders.key?(loader_name)
+          raise ArgumentError, "No ruby loader registered for '#{loader_name}'."
+        end
+        unless loader.respond_to?(:call)
+          raise ArgumentError, "Ruby loader '#{loader_name}' must respond to #call."
+        end
+      end
+
       def all_fields
-        @all_fields ||= extract_fields(columns)
+        columns.keys
       end
 
       private
@@ -120,17 +141,6 @@ module Prato
       def add_draft_column(name, column)
         @validated = false
         @draft_columns << DraftColumn.new(name, column)
-      end
-
-      # Given a list of columns, returns an array of either symbols or arrays of symbols
-      def extract_fields(columns)
-        columns.map do |id, col|
-          if col.is_a?(Types::Section)
-            extract_fields(col.columns)
-          else
-            col.id
-          end
-        end
       end
 
       def parse_name_map(name_map)
