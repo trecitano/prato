@@ -6,12 +6,10 @@ module Prato
       extend self
 
       def present_table(scope, spec, raw_params:, paginated: true)
-        spec.validate_and_update_keys!
-
         config = spec.config
         params = resolve_parameters(raw_params, config)
 
-        base_query_state = QueryState.create(scope)
+        base_query_state = QueryState.create(scope, spec.all_fields)
 
         filtered_query = Pipeline::Filtering.filter_query(base_query_state, spec, params&.filters)
         sorted_query = Pipeline::Sorting.sort_query(filtered_query, spec, params&.sorts)

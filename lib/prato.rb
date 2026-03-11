@@ -25,13 +25,21 @@ require_relative "prato/internal/pipeline/serializer"
 require_relative "prato/internal/pipeline/sorting"
 
 require_relative "prato/table"
+require_relative "prato/table_builder"
 require_relative "prato/internal/table_presenter"
 
 module Prato
   extend self
 
-  def table
-    Prato::Table.new
+  def table(&block)
+    raise ArgumentError, "Prato.table requires a block" unless block_given?
+    raise ArgumentError, "Prato.table block must not accept arguments" unless block.parameters.empty?
+
+    builder = TableBuilder.new
+    builder.instance_exec(&block)
+    spec = builder.build
+
+    Table.new(spec)
   end
 
   def setup

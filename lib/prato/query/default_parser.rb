@@ -19,7 +19,6 @@ module Prato
         )
       end
 
-
       def parse_page(raw_value)
         value = raw_value&.to_i || 1
         value.positive? ? value : 1

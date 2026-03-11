@@ -5,14 +5,20 @@ module Prato
     class QueryState
       attr_reader :dataset, :ruby_loaders, :applied_scopes, :wrapped_for_computed, :required_columns
 
-      def self.create(base_scope)
+      def self.create(base_scope, required_fields)
         dataset = base_scope.dup
         ruby_loaders = {}
         applied_scopes = []
         wrapped_for_computed = []
-        required_columns = [] # TODO
 
-        new(dataset, ruby_loaders, applied_scopes, wrapped_for_computed, required_columns)
+        new(dataset, ruby_loaders, applied_scopes, wrapped_for_computed, required_fields)
+      end
+
+      def self.build_required_columns(spec, fields:, filters:, sorts:)
+        requested_fields = fields || spec.all_fields
+        filter_fields = extract_filter_fields(filters)
+        sort_fields = extract_sort_fields(sorts)
+        normalize_field_paths(requested_fields + filter_fields + sort_fields).uniq
       end
 
       def with_dataset(dataset)

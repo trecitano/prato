@@ -2,36 +2,10 @@
 
 module Prato
   class Table
+    def initialize(spec)
+      spec.validate_and_update_keys!
 
-    attr_reader :spec
-
-    def initialize
-      @spec = Internal::Specification.new
-    end
-
-    def column(*args, **kwargs)
-      @spec.inner_column(*args, **kwargs)
-      self
-    end
-
-    def ruby_column(*args, **kwargs)
-      @spec.inner_ruby_column(*args, **kwargs)
-      self
-    end
-
-    def section(id, &block)
-      @spec.inner_section(id, &block)
-      self
-    end
-
-    def ruby_loaders(**kwargs)
-      @spec.inner_context(kwargs)
-      self
-    end
-
-    def configure(config)
-      @spec.inner_config(config)
-      self
+      @spec = spec
     end
 
     def to_page(scope, params: nil)
