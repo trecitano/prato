@@ -12,10 +12,12 @@ require_relative "prato/query/default_parser"
 require_relative "prato/configuration"
 
 require_relative "prato/types/column"
+require_relative "prato/types/aggregate_column"
 require_relative "prato/types/ruby_column"
 require_relative "prato/types/section"
 
-require_relative "prato/internal/lazy_context"
+require_relative "prato/internal/lazy_loader_cache"
+require_relative "prato/internal/value_extractor"
 require_relative "prato/internal/query_state"
 require_relative "prato/internal/specification"
 
@@ -31,13 +33,15 @@ require_relative "prato/internal/table_presenter"
 module Prato
   extend self
 
-  def table(&block)
+  def table(base_model, &block)
     raise ArgumentError, "Prato.table requires a block" unless block_given?
     raise ArgumentError, "Prato.table block must not accept arguments" unless block.parameters.empty?
 
     builder = TableBuilder.new
     builder.instance_exec(&block)
-    spec = builder.build
+    spec = builder.spec
+
+    spec.validate_and_update_keys!(base_model)
 
     Table.new(spec)
   end

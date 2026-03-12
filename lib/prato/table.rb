@@ -3,8 +3,6 @@
 module Prato
   class Table
     def initialize(spec)
-      spec.validate_and_update_keys!
-
       @spec = spec
     end
 

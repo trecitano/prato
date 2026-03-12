@@ -3,6 +3,8 @@
 module Prato
   class TableBuilder
 
+    attr_reader :spec
+
     def initialize
       @spec = Internal::Specification.new
     end
@@ -28,11 +30,6 @@ module Prato
 
     def configure(config)
       @spec.inner_config(config)
-    end
-
-    def build()
-      @spec.validate_and_update_keys!
-      @spec
     end
   end
 end

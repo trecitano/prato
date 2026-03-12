@@ -100,7 +100,7 @@ module Prato
         case input
         when String
           parse_sorts(parse_json_value(input, context: 'sorts'))
-        when Prato::Internal::Sort
+        when Prato::Query::Sort
           [input]
         when Hash
           [parse_sort_entry(input)]
@@ -112,7 +112,7 @@ module Prato
       end
 
       def parse_sort_entry(entry)
-        return entry if entry.is_a?(Prato::Internal::Sort)
+        return entry if entry.is_a?(Prato::Query::Sort)
 
         sort_hash = normalize_entry_hash(entry, context: 'sort')
         field = sort_hash[:field]
@@ -124,7 +124,7 @@ module Prato
                       truthy?(sort_hash[:desc]) ? :desc : :asc
                     end
 
-        Prato::Internal::Sort.new(parse_field(field), direction)
+        Prato::Query::Sort.new(parse_field(field), direction)
       end
 
       def parse_fields(fields)
@@ -158,6 +158,49 @@ module Prato
         hash.each_with_object({}) do |(key, value), result|
           result[key.respond_to?(:to_sym) ? key.to_sym : key] = value
         end
+      end
+
+      def coerce_hash(value, context: nil)
+        case value
+        when Hash
+          value
+        when String
+          parse_json_value(value, context: context)
+        else
+          raise ArgumentError, "Expected a Hash for #{context}, got #{value.class}"
+        end
+      end
+
+      def normalize_entry_hash(entry, context: nil)
+        normalize_hash_keys(coerce_hash(entry, context: context))
+      end
+
+      def normalize_sort_direction(value)
+        case value.to_s.downcase
+        when "desc", "descending"
+          :desc
+        else
+          :asc
+        end
+      end
+
+      def truthy?(value)
+        case value
+        when true, 1, "1", "true", "yes"
+          true
+        else
+          false
+        end
+      end
+
+      def parse_json(string, context: nil)
+        JSON.parse(string)
+      rescue JSON::ParserError => e
+        raise ArgumentError, "Invalid JSON for #{context}: #{e.message}"
+      end
+
+      def parse_json_value(string, context: nil)
+        parse_json(string, context: context)
       end
     end
   end

@@ -3,11 +3,7 @@
 module Prato
   module Types
     class Column
-      attr_reader :accessor
-
-      attr_reader :display
-
-      attr_reader :scope
+      attr_reader :accessor, :display, :scope
 
       def initialize(accessor, display: nil, scope: nil)
         @accessor = accessor

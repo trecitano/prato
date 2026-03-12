@@ -2,7 +2,7 @@
 
 module Prato
   module Internal
-    class LazyContext < Hash
+    class LazyLoaderCache < Hash
       def initialize(records)
         super(records)
 

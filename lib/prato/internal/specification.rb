@@ -3,7 +3,6 @@
 module Prato
   module Internal
     class Specification
-
       # Maps accessor (key) to Column information
       # The sections are flattened.
       # Example:
@@ -27,11 +26,7 @@ module Prato
       # ]
       attr_reader :fields
 
-      attr_reader :ruby_loaders
-
-      attr_reader :config
-
-      attr_reader :draft_columns
+      attr_reader :ruby_loaders, :config, :draft_columns
 
       def initialize
         @columns = {}
@@ -40,51 +35,56 @@ module Prato
         @draft_columns = []
       end
 
+      AGGREGATE_FUNCTIONS = %i[count sum avg min max].freeze
+      RESERVED_COLUMN_SYMBOLS = (%i[display scope] + AGGREGATE_FUNCTIONS).freeze
+      RESERVED_RUBY_COLUMN_SYMBOLS = %i[loader key].freeze
+
       def inner_column(*args, **kwargs)
-        if args.any?
-          name_map = args.first
-          display = kwargs[:display]
-          scope = kwargs[:scope]
-        else
-          display = kwargs.delete(:display)
-          scope = kwargs.delete(:scope)
-          name_map = kwargs
-        end
+        name_map, options = extract_name_and_options(args, kwargs, RESERVED_COLUMN_SYMBOLS)
+        aggregate_function, aggregate_accessor = extract_aggregate(options)
 
-        name, accessor = parse_name_map(name_map)
-        column = ::Prato::Types::Column.new(accessor, display: display, scope: scope)
+        draft = if aggregate_function
+                  column = ::Prato::Types::AggregateColumn.new(aggregate_function, aggregate_accessor)
+                  DraftColumn.new(nil, name_map, column)
+                else
+                  name, accessor = parse_name_map(name_map)
+                  column = ::Prato::Types::Column.new(accessor, display: options[:display], scope: options[:scope])
+                  DraftColumn.new(name, accessor, column)
+                end
 
-        @draft_columns << DraftColumn.new(name, column)
+        @draft_columns << draft
       end
 
-      def inner_ruby_column(*args, **kwargs)
-        if args.any?
-          name_map = args.first
-          key = kwargs[:key]
-        else
-          key = kwargs.delete(:key)
-          name_map = kwargs
-        end
+      # Either single symbol, following by keyword arguments,
+      # or a list of keyword arguments.
+      # ruby_column(frontendName: :loader_identification)
+      # ruby_column(:loader_identification, key: [:posts, :id])
+      def inner_ruby_column(*args, **_kwargs)
+        name_map, = extract_name_and_options(args, %i[display scope] + AGGREGATE_FUNCTIONS)
+        parse_name_map(name_map)
 
         name, loader = parse_name_map(name_map)
         accessor = parse_accessor(key)
         column = ::Prato::Types::RubyColumn.new(loader, key: accessor)
 
-        @draft_columns << DraftColumn.new(name, column)
+        @draft_columns << DraftColumn.new(name, nil, column)
       end
 
       def inner_section(id, &block)
         section = SectionBuilder.new
 
-        if block_given?
-          section.instance_exec(&block)
-        else
-          raise ArgumentError, "No block given to section"
-        end
+        raise ArgumentError, "No block given to section" unless block_given?
+
+        section.instance_exec(&block)
 
         section.spec.draft_columns.each do |nested|
-          section_name = [id, nested.name]
-          @draft_columns << DraftColumn.new(section_name, nested.column)
+          draft = if nested.override_name.nil?
+                    DraftColumn.new(nil, [id, nested.accessor_name], nested.column)
+                  else
+                    DraftColumn.new([id, nested.override_name], nil, nested.column)
+                  end
+
+          @draft_columns << draft
         end
       end
 
@@ -97,13 +97,17 @@ module Prato
         @config = config
       end
 
-      def validate_and_update_keys!
+      def validate_associations!(scope)
+        # TODO: Validate that column associations exist on the model
+      end
+
+      def validate_and_update_keys!(_base_model = nil)
         @draft_columns.each do |draft|
           column_display_id = transform_draft_name(draft, config.key_transformation)
+          validate_ruby_loader!(draft, @loaders)
 
           if @columns.key?(column_display_id)
-            validate_ruby_loader!(draft, @loaders)
-            raise ArgumentError.new("Column '#{column_display_id}' has already been defined.")
+            raise ArgumentError, "Column '#{column_display_id}' has already been defined."
           end
 
           @columns[column_display_id] = draft.column
@@ -117,19 +121,14 @@ module Prato
 
         loader_name = column.loader
 
-        if loader_name.nil?
-          raise ArgumentError, "Ruby column '#{draft.name || column.key}' is missing a loader."
-        end
-        if loaders.nil?
-          raise ArgumentError, "No ruby loader registered for '#{loader_name}'."
-        end
+        raise ArgumentError, "Ruby column '#{draft.name || column.key}' is missing a loader." if loader_name.nil?
+        raise ArgumentError, "No ruby loader registered for '#{loader_name}'." if loaders.nil?
+
         loader = loaders[loader_name]
-        unless loaders.key?(loader_name)
-          raise ArgumentError, "No ruby loader registered for '#{loader_name}'."
-        end
-        unless loader.respond_to?(:call)
-          raise ArgumentError, "Ruby loader '#{loader_name}' must respond to #call."
-        end
+        raise ArgumentError, "No ruby loader registered for '#{loader_name}'." unless loaders.key?(loader_name)
+        return if loader.respond_to?(:call)
+
+        raise ArgumentError, "Ruby loader '#{loader_name}' must respond to #call."
       end
 
       def all_fields
@@ -138,9 +137,29 @@ module Prato
 
       private
 
+      def extract_name_and_options(args, kwargs, reserved)
+        if args.any?
+          [args.first, kwargs]
+        else
+          reserved = %i[display scope key] + AGGREGATE_FUNCTIONS
+          option_keys = kwargs.keys & reserved
+          options = kwargs.slice(*option_keys)
+          name_map = kwargs.except(*reserved)
+          [name_map, options]
+        end
+      end
+
       def add_draft_column(name, column)
         @validated = false
         @draft_columns << DraftColumn.new(name, column)
+      end
+
+      def extract_aggregate(kwargs)
+        AGGREGATE_FUNCTIONS.each do |func|
+          value = kwargs.delete(func)
+          return [func, value] if value
+        end
+        nil
       end
 
       def parse_name_map(name_map)
@@ -181,43 +200,30 @@ module Prato
       end
 
       def normalize_config_keys(config_hash)
-        config_hash.each_with_object({}) do |(key, value), result|
-          result[key.respond_to?(:to_sym) ? key.to_sym : key] = value
+        config_hash.transform_keys do |key|
+          key.respond_to?(:to_sym) ? key.to_sym : key
         end
       end
 
       def transform_draft_name(draft, transformation)
-        name = draft.name
+        return draft.override_name unless draft.override_name.nil?
 
-        return name unless Array(name).last.nil?
-
-        column = draft.column
-        name = if column.is_a?(Prato::Types::Column)
-                 Array(column.accessor).last
-               else
-                 column.loader
-               end
-
-        transformed_name = case transformation
-                           when :camelCase
-                             to_camel_case(name).to_sym
-                           when :snake_case
-                             to_snake_case(name).to_sym
-                           when :none
-                             name.to_sym
-                           end
-
-        if name.is_a?(Array)
-          name.tap { |n| n[-1] = transformed_name }
-        else
-          transformed_name
-        end
+        raw_name = Array(draft.accessor_name).last
+        case transformation
+         when :camelCase
+           to_camel_case(raw_name).to_sym
+         when :snake_case
+           to_snake_case(raw_name).to_sym
+         when :none
+           raw_name.to_sym
+         end
       end
 
       def to_camel_case(value)
         parts = to_snake_case(value).split("_")
         parts.first + parts.drop(1).map(&:capitalize).join
       end
+
       def to_snake_case(value)
         value
           .to_s
@@ -226,13 +232,18 @@ module Prato
           .tr("-", "_")
           .downcase
       end
+
+      private_constant :RESERVED_COLUMN_SYMBOLS
+      private_constant :RESERVED_RUBY_COLUMN_SYMBOLS
+      private_constant :AGGREGATE_FUNCTIONS
     end
 
     class DraftColumn
-      attr_reader :name, :column
+      attr_reader :override_name, :accessor_name, :column
 
-      def initialize(name, column)
-        @name = name
+      def initialize(override_name, accessor_name, column)
+        @override_name = override_name
+        @accessor_name = accessor_name
         @column = column
       end
     end
@@ -243,14 +254,17 @@ module Prato
       def initialize
         @spec = Specification.new
       end
+
       def column(*args, **kwargs)
         @spec.inner_column(*args, **kwargs)
         self
       end
+
       def ruby_column(*args, **kwargs)
         @spec.inner_ruby_column(*args, **kwargs)
         self
       end
+
       def section(id, &block)
         @spec.inner_section(id, &block)
         self
