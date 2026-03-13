@@ -17,7 +17,6 @@ require_relative "prato/types/ruby_column"
 require_relative "prato/types/section"
 
 require_relative "prato/internal/lazy_loader_cache"
-require_relative "prato/internal/value_extractor"
 require_relative "prato/internal/query_state"
 require_relative "prato/internal/specification"
 

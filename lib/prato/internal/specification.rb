@@ -101,7 +101,7 @@ module Prato
         # TODO: Validate that column associations exist on the model
       end
 
-      def validate_and_update_keys!(_base_model = nil)
+      def validate_and_update_keys!(base_model)
         @draft_columns.each do |draft|
           column_display_id = transform_draft_name(draft, config.key_transformation)
           validate_ruby_loader!(draft, @loaders)
@@ -110,7 +110,13 @@ module Prato
             raise ArgumentError, "Column '#{column_display_id}' has already been defined."
           end
 
-          @columns[column_display_id] = draft.column
+          column = draft.column
+          @columns[column_display_id] = column
+          if column.is_a?(Types::Column)
+            column.resolve_arel!(base_model)
+          elsif column.is_a?(Types::AggregateColumn)
+            column.resolve_arel!(base_model, column_display_id)
+          end
         end
         @draft_columns.clear
       end
@@ -133,6 +139,10 @@ module Prato
 
       def all_fields
         columns.keys
+      end
+
+      def column(field)
+        @columns[field]
       end
 
       private

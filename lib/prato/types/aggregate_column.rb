@@ -5,14 +5,67 @@ module Prato
     class AggregateColumn
       attr_reader :aggregate_function, :accessor
 
-      attr_reader :association_path, :aggregate_field
+      attr_reader :arel_node, :association_path
 
       def initialize(aggregate_function, accessor)
         @accessor = Array(accessor)
         @aggregate_function = aggregate_function
+      end
 
-        @association_path = aggregate_function == :count ? @accessor : @accessor[0..-2]
-        @aggregate_field = aggregate_function == :count ? nil : @accessor[-1]
+      def resolve_arel!(base_model, display_id)
+        association_path = aggregate_function == :count ? @accessor : @accessor[0..-2]
+        aggregate_field = aggregate_function == :count ? nil : @accessor[-1]
+
+        reflections = resolve_reflections(base_model, association_path)
+        target_table = reflections.last.klass.arel_table
+        base_table = base_model.arel_table
+
+        subquery = target_table.project(aggregate_expression(target_table, aggregate_function, aggregate_field))
+
+        reflections.reverse_each.each_cons(2) do |child_ref, parent_ref|
+          parent_table = parent_ref.klass.arel_table
+          subquery = subquery.join(parent_table).on(
+            parent_table[parent_ref.klass.primary_key].eq(
+              child_ref.klass.arel_table[child_ref.foreign_key]
+            )
+          )
+        end
+
+        first_ref = reflections.first
+        subquery = subquery.where(
+          first_ref.klass.arel_table[first_ref.foreign_key].eq(
+            base_table[first_ref.active_record_primary_key]
+          )
+        )
+
+        @arel_node = Arel::Nodes::Grouping.new(subquery)
+        @sql_alias = display_id.is_a?(Array) ? display_id.join("__") : display_id
+      end
+
+      def extract_value(record, _ruby_data = nil)
+        record.public_send(@sql_alias)
+      end
+
+      private
+
+      def resolve_reflections(base_model, path)
+        current_model = base_model
+        path.map do |assoc_name|
+          reflection = current_model.reflect_on_association(assoc_name)
+          raise ArgumentError, "Unknown association '#{assoc_name}' on #{current_model}" unless reflection
+          current_model = reflection.klass
+          reflection
+        end
+      end
+
+      def aggregate_expression(table, aggregate_function, aggregate_field)
+        case aggregate_function
+        when :count then Arel.star.count
+        when :sum   then Arel::Nodes::NamedFunction.new("COALESCE", [table[aggregate_field].sum, 0])
+        when :avg   then table[aggregate_field].average
+        when :min   then table[aggregate_field].minimum
+        when :max   then table[aggregate_field].maximum
+        end
       end
     end
   end

@@ -11,6 +11,12 @@ module Prato
         @loader = loader
         @key = key
       end
+
+      def extract_value(record, ruby_data)
+        key_value = record.public_send(key)
+
+        ruby_data[loader]&.[](key_value)
+      end
     end
   end
 end

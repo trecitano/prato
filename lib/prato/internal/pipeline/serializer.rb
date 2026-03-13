@@ -16,14 +16,11 @@ module Prato
               column = columns[field]
 
               result = if column.is_a?(Types::RubyColumn)
-                         Prato::Internal::ValueExtractor.extract_computed_value(record, column, ruby_loaded_data)
-                       elsif column.is_a?(Types::AggregateColumn)
-                         sql_alias = field.is_a?(Array) ? field.join("__") : field
-                         record.public_send(sql_alias)
+                         column.extract_value(record, ruby_loaded_data)
                        elsif column.is_a?(Types::Column) && column.display
                          column.display.call(record)
                        else
-                         Prato::Internal::ValueExtractor.extract_value_with_accessor(record, column.accessor)
+                         column.extract_value(record)
                        end
 
               hash[field] = result
