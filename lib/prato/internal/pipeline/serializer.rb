@@ -20,7 +20,7 @@ module Prato
                        elsif column.is_a?(Types::Column) && column.display
                          column.display.call(record)
                        else
-                         column.extract_value(record)
+                         column.extract_value(record, nil)
                        end
 
               hash[field] = result

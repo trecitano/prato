@@ -42,7 +42,7 @@ module Prato
         @sql_alias = display_id.is_a?(Array) ? display_id.join("__") : display_id
       end
 
-      def extract_value(record, _ruby_data = nil)
+      def extract_value(record, _)
         record.public_send(@sql_alias)
       end
 

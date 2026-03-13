@@ -25,7 +25,7 @@ module Prato
         end
       end
 
-      def extract_value(record)
+      def extract_value(record, _)
         case accessor
         when Array
           accessor.reduce(record) do |obj, method|
