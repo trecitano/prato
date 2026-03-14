@@ -3,12 +3,11 @@
 module Prato
   module Types
     class ExpressionColumn
-      attr_reader :expression, :arel_node, :format, :transform_record
+      attr_reader :expression, :arel_node, :format
 
-      def initialize(expression, format: nil, transform_record: nil)
+      def initialize(expression, format: nil)
         @expression = expression
         @format = format
-        @transform_record = transform_record
       end
 
       def resolve_arel!(_base_model, display_id)

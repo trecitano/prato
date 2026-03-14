@@ -36,7 +36,7 @@ module Prato
       end
 
       AGGREGATE_FUNCTIONS = %i[count sum avg min max].freeze
-      RESERVED_COLUMN_SYMBOLS = (%i[format transform_record expression] + AGGREGATE_FUNCTIONS).freeze
+      RESERVED_COLUMN_SYMBOLS = (%i[format expression] + AGGREGATE_FUNCTIONS).freeze
       RESERVED_RUBY_COLUMN_SYMBOLS = %i[loader key].freeze
 
       def inner_column(*args, **kwargs)
@@ -48,11 +48,11 @@ module Prato
                   DraftColumn.new(nil, name_map, column)
                 elsif options[:expression]
                   name, accessor = parse_name_map(name_map)
-                  column = ::Prato::Types::ExpressionColumn.new(options[:expression], format: options[:format], transform_record: options[:transform_record])
+                  column = ::Prato::Types::ExpressionColumn.new(options[:expression], format: options[:format])
                   DraftColumn.new(name, accessor, column)
                 else
                   name, accessor = parse_name_map(name_map)
-                  column = ::Prato::Types::Column.new(accessor, format: options[:format], transform_record: options[:transform_record])
+                  column = ::Prato::Types::Column.new(accessor, format: options[:format])
                   DraftColumn.new(name, accessor, column)
                 end
 
@@ -147,7 +147,7 @@ module Prato
         fields_to_check = display_fields || columns.keys
         fields_to_check.none? do |field|
           col = columns[field]
-          col.is_a?(Types::RubyColumn) || (col.respond_to?(:transform_record) && col.transform_record)
+          col.is_a?(Types::RubyColumn)
         end
       end
 
@@ -161,7 +161,7 @@ module Prato
         if args.any?
           [args.first, kwargs]
         else
-          reserved = %i[format transform_record expression key] + AGGREGATE_FUNCTIONS
+          reserved = %i[format expression key] + AGGREGATE_FUNCTIONS
           option_keys = kwargs.keys & reserved
           options = kwargs.slice(*option_keys)
           name_map = kwargs.except(*reserved)

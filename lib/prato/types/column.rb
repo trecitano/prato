@@ -3,12 +3,11 @@
 module Prato
   module Types
     class Column
-      attr_reader :accessor, :format, :transform_record, :association_path, :arel_node
+      attr_reader :accessor, :format, :association_path, :arel_node
 
-      def initialize(accessor, format: nil, transform_record: nil)
+      def initialize(accessor, format: nil)
         @accessor = accessor
         @format = format
-        @transform_record = transform_record
       end
 
       def resolve_arel!(base_model, display_id = nil)

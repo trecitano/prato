@@ -17,8 +17,6 @@ module Prato
 
               result = if column.is_a?(Types::RubyColumn)
                          column.extract_value(record, ruby_loaded_data)
-                       elsif column.respond_to?(:transform_record) && column.transform_record
-                         column.transform_record.call(record)
                        else
                          value = column.extract_value(record, nil)
                          column.format ? column.format.call(value) : value
