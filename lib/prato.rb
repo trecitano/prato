@@ -12,6 +12,7 @@ require_relative "prato/query/default_parser"
 require_relative "prato/configuration"
 
 require_relative "prato/types/column"
+require_relative "prato/types/expression_column"
 require_relative "prato/types/aggregate_column"
 require_relative "prato/types/ruby_column"
 require_relative "prato/types/section"

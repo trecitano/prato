@@ -3,13 +3,14 @@
 module Prato
   module Types
     class AggregateColumn
-      attr_reader :aggregate_function, :accessor
+      attr_reader :aggregate_function, :accessor, :format
 
       attr_reader :arel_node, :association_path
 
-      def initialize(aggregate_function, accessor)
+      def initialize(aggregate_function, accessor, format: nil)
         @accessor = Array(accessor)
         @aggregate_function = aggregate_function
+        @format = format
       end
 
       def resolve_arel!(base_model, display_id)
@@ -43,7 +44,7 @@ module Prato
       end
 
       def extract_value(record, _)
-        record.public_send(@sql_alias)
+        record[@sql_alias]
       end
 
       private

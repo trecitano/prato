@@ -36,7 +36,7 @@ module Prato
         end
 
         def apply_ruby_sorts(query_state, spec, sorts)
-          records, ruby_data = query_state.materialized_dataset(spec)
+          records, ruby_data = query_state.full_materialize(spec, spec.all_fields)
 
           sorted = records.sort do |a, b|
             sorts.reduce(0) do |cmp, sort|

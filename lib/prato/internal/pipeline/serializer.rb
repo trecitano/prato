@@ -7,8 +7,8 @@ module Prato
         module_function
 
         def serialize_query(query_state, spec, raw_fields)
-          records, ruby_loaded_data = query_state.materialized_dataset(spec)
           fields = raw_fields || spec.all_fields
+          records, ruby_loaded_data = query_state.materialized_dataset(spec, fields)
           columns = spec.columns
 
           records.map do |record|
@@ -17,10 +17,11 @@ module Prato
 
               result = if column.is_a?(Types::RubyColumn)
                          column.extract_value(record, ruby_loaded_data)
-                       elsif column.is_a?(Types::Column) && column.display
-                         column.display.call(record)
+                       elsif column.respond_to?(:transform_record) && column.transform_record
+                         column.transform_record.call(record)
                        else
-                         column.extract_value(record, nil)
+                         value = column.extract_value(record, nil)
+                         column.format ? column.format.call(value) : value
                        end
 
               hash[field] = result

@@ -3,15 +3,17 @@
 module Prato
   module Types
     class Column
-      attr_reader :accessor, :display, :scope, :association_path, :arel_node, :aggregate_field
+      attr_reader :accessor, :format, :transform_record, :association_path, :arel_node
 
-      def initialize(accessor, display: nil, scope: nil)
+      def initialize(accessor, format: nil, transform_record: nil)
         @accessor = accessor
-        @display = display
-        @scope = scope
+        @format = format
+        @transform_record = transform_record
       end
 
-      def resolve_arel!(base_model)
+      def resolve_arel!(base_model, display_id = nil)
+        @sql_alias = display_id.is_a?(Array) ? display_id.join("__") : display_id.to_s
+
         if accessor.is_a?(Array) && accessor.length > 1
           @association_path = accessor[0..-2]
           target_model = @association_path.reduce(base_model) do |model, assoc|
@@ -26,16 +28,7 @@ module Prato
       end
 
       def extract_value(record, _)
-        case accessor
-        when Array
-          accessor.reduce(record) do |obj, method|
-            return nil if obj.nil?
-
-            obj.public_send(method)
-          end
-        when Symbol, String
-          record.public_send(accessor)
-        end
+        record[@sql_alias]
       end
     end
   end

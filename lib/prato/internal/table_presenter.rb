@@ -9,7 +9,7 @@ module Prato
         config = spec.config
         params = resolve_parameters(raw_params, config)
 
-        base_query_state = QueryState.create(scope, spec.all_fields)
+        base_query_state = QueryState.create(scope)
 
         filtered_query = Pipeline::Filtering.filter_query(base_query_state, spec, params&.filters)
         sorted_query = Pipeline::Sorting.sort_query(filtered_query, spec, params&.sorts)
