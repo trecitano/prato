@@ -14,18 +14,16 @@ module Prato
       end
     end
 
-    attr_accessor :key_transformation, :strict_loading_violation, :parameter_parser, :default_page_size, :maximum_page_size
+    attr_accessor :key_transformation, :parameter_parser, :default_page_size, :maximum_page_size
 
     def initialize
       @key_transformation = :camelCase
-      @strict_loading_violation = true
       @parameter_parser = Prato::Query::DefaultParser.new
       @default_page_size = 20
       @maximum_page_size = 100
     end
 
     KEY_TRANSFORMATION_OPTIONS = [ :camelCase, :snake_case, :none].freeze
-
     def key_transformation=(value)
       raise ArgumentError unless value.is_a?(Symbol)
       raise unless KEY_TRANSFORMATION_OPTIONS.include?(value)

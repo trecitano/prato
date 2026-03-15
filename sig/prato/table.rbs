@@ -1,0 +1,14 @@
+module Prato
+  class Table
+    type params_input = String | Hash[Symbol | String, untyped] | Query::Parameters | nil
+    type entry_value = Symbol | Hash[Symbol, entry_value]
+    type entry = Hash[Symbol, entry_value]
+    type result = { entries: Array[entry], totalCount: Integer }
+
+    @spec: Internal::Specification
+
+    def initialize: (Internal::Specification spec) -> void
+    def to_page: (::ActiveRecord::Relation scope, ?params: params_input) -> result
+    def to_table: (::ActiveRecord::Relation scope, ?params: params_input) -> result
+  end
+end

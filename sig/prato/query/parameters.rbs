@@ -1,0 +1,15 @@
+module Prato
+  module Query
+    class Parameters
+      type filter_type = Filter | Array[Filter | AndFilter | OrFilter]
+
+      attr_reader page: Integer?
+      attr_reader per_page: Integer?
+      attr_reader filters: filter_type?
+      attr_reader sorts: Sort | Array[Sort]?
+      attr_reader fields: untyped
+
+      def initialize: (?page: Integer?, ?per_page: Integer?, ?filters: filter_type?, ?sorts: Sort | Array[Sort]?, ?fields: untyped) -> void
+    end
+  end
+end

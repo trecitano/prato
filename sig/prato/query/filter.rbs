@@ -1,0 +1,20 @@
+module Prato
+  module Query
+    class Filter
+      type filter_operator = :eq | :not_eq
+        | :lt | :lte | :gt | :gte
+        | :present | :not_present
+        | :in | :not_in
+        | :contains | :not_contains
+        | :between | :not_between
+        | :between_exclusive | :not_between_exclusive
+      type value_type = Numeric | String | Array[Numeric | String] | nil
+
+      attr_reader field: Symbol | Array[Symbol]
+      attr_reader operator: filter_operator
+      attr_reader value: value_type
+
+      def initialize: (Symbol | Array[Symbol] field, filter_operator operator, value_type value) -> void
+    end
+  end
+end

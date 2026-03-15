@@ -3,9 +3,7 @@
 module Prato
   module Types
     class AggregateColumn
-      attr_reader :aggregate_function, :accessor, :format
-
-      attr_reader :arel_node, :association_path
+      attr_reader :arel_node, :format
 
       def initialize(aggregate_function, accessor, format: nil)
         @accessor = Array(accessor)
@@ -14,8 +12,8 @@ module Prato
       end
 
       def resolve_arel!(base_model, display_id)
-        association_path = aggregate_function == :count ? @accessor : @accessor[0..-2]
-        aggregate_field = aggregate_function == :count ? nil : @accessor[-1]
+        association_path = @aggregate_function == :count ? @accessor : @accessor[0..-2]
+        aggregate_field = @aggregate_function == :count ? nil : @accessor[-1]
 
         reflections = resolve_reflections(base_model, association_path)
         target_table = reflections.last.klass.arel_table
@@ -54,6 +52,7 @@ module Prato
         path.map do |assoc_name|
           reflection = current_model.reflect_on_association(assoc_name)
           raise ArgumentError, "Unknown association '#{assoc_name}' on #{current_model}" unless reflection
+
           current_model = reflection.klass
           reflection
         end

@@ -1,0 +1,31 @@
+module Prato
+  class TableBuilder
+    type name_arg = Symbol | Hash[Symbol | String, Symbol | Array[Symbol]]
+    type formatter = ^(untyped) -> untyped
+    type count_arg = Symbol | Array[Symbol]
+    type agg_arg = Array[Symbol]
+
+    attr_reader spec: Internal::Specification
+
+    def initialize: () -> void
+
+    def column:
+      (name_arg column_ref, ?format: formatter, ?expression: Symbol | String) -> void
+      | (name_arg column_ref, ?format: formatter, count: count_arg) -> void
+      | (name_arg column_ref, ?format: formatter, sum: agg_arg) -> void
+      | (name_arg column_ref, ?format: formatter, avg: agg_arg) -> void
+      | (name_arg column_ref, ?format: formatter, min: agg_arg) -> void
+      | (name_arg column_ref, ?format: formatter, max: agg_arg) -> void
+      | (Symbol | String label, Symbol | Array[Symbol] accessor, ?format: formatter) -> void
+      | (**(Symbol | Array[Symbol] | formatter)) -> void
+
+    def ruby_column:
+      (Symbol label, ?key: Symbol) -> void
+      | (Symbol | String label, Symbol loader, ?key: Symbol) -> void
+      | (**Symbol) -> void
+
+    def section: (Symbol | String id) { () -> void } -> void
+    def ruby_loader: (Symbol id) { (Array[ActiveRecord::Base] records, Hash[Symbol, untyped] loaded_data) -> untyped } -> void
+    def configure: (Configuration config) -> void
+  end
+end

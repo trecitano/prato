@@ -1,0 +1,14 @@
+module Prato
+  module Types
+    class AggregateColumn
+      attr_reader arel_node: Arel::Nodes::Grouping
+      attr_reader format: Proc?
+
+      @accessor: Symbol | Array[Symbol]
+      @aggregate_function: Symbol
+      @sql_alias: String
+
+      def initialize: (Symbol aggregate_function, Symbol | Array[Symbol] accessor, ?format: Proc?) -> void
+    end
+  end
+end

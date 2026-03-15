@@ -3,19 +3,16 @@
 module Prato
   module Types
     class RubyColumn
-      attr_reader :loader
-
-      attr_reader :key
 
       def initialize(loader, key:)
         @loader = loader
-        @key = key
+        @key = key || :id
       end
 
       def extract_value(record, ruby_data)
-        key_value = record.public_send(key)
+        key_value = record.public_send(@key)
 
-        ruby_data[loader]&.[](key_value)
+        ruby_data[@loader]&.[](key_value)
       end
     end
   end

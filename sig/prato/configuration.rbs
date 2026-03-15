@@ -1,0 +1,21 @@
+module Prato
+  class Configuration
+    type key_transformation = :camelCase | :snake_case | :none
+
+    interface _ParameterParser
+      def parse_parameters: (untyped input) -> Query::Parameters
+    end
+
+    def self.config: () -> Configuration
+    def self.configure: () { (Configuration) -> void } -> Configuration
+
+    attr_accessor default_page_size: Integer
+    attr_accessor maximum_page_size: Integer
+    attr_reader key_transformation: key_transformation
+    attr_reader parameter_parser: _ParameterParser
+
+    def initialize: () -> void
+    def key_transformation=: (key_transformation value) -> key_transformation
+    def parameter_parser=: (_ParameterParser parser) -> _ParameterParser
+  end
+end

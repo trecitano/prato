@@ -1,0 +1,10 @@
+module Prato
+  module Query
+    class Sort
+      attr_reader field: Symbol | Array[Symbol]
+      attr_reader order: Symbol
+
+      def initialize: (Symbol | Array[Symbol] field, Symbol order) -> void
+    end
+  end
+end

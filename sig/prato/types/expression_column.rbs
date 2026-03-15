@@ -1,0 +1,15 @@
+module Prato
+  module Types
+    class ExpressionColumn
+      attr_reader expression: String
+      attr_reader arel_node: Arel::Nodes::Grouping
+      attr_reader format: Proc?
+
+      @@sql_alias: String
+
+      def initialize: (String expression, ?format: Proc?) -> void
+      def resolve_arel!: (singleton(::ActiveRecord::Base) model, Symbol | Array[Symbol] display_id) -> void
+      def extract_value: (::ActiveRecord::Base record, untyped _) -> untyped
+    end
+  end
+end
