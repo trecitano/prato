@@ -6,7 +6,7 @@ module Prato
       module Pagination
         extend self
 
-        def paginate_query(query_state, config,raw_page, raw_per_page)
+        def paginate_query(query_state, config, raw_page, raw_per_page)
           page = raw_page || 1
           per_page = raw_per_page || config.default_page_size
           if per_page > config.maximum_page_size

@@ -9,6 +9,8 @@ module Prato
         config = spec.config
         params = resolve_parameters(raw_params, config)
 
+        return invalid_input_result(config) unless spec.valid_parameters?(params)
+
         base_query_state = QueryState.create(scope)
 
         filtered_query = Pipeline::Filtering.filter_query(base_query_state, spec, params&.filters)
@@ -28,6 +30,15 @@ module Prato
         return input if input.is_a?(Query::Parameters)
 
         config.parameter_parser.parse_parameters(input)
+      end
+
+      def invalid_input_result(configuration)
+        raise ArgumentError if configuration.on_invalid_input == :raise
+
+        {
+          entries: [],
+          totalCount: 0
+        }
       end
 
       def total_count(query_state)

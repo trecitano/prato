@@ -7,12 +7,12 @@ module Prato
         module_function
 
         def serialize_query(query_state, spec, raw_fields)
-          fields = raw_fields || spec.all_fields
+          fields = raw_fields || spec.visible_fields
           records, ruby_loaded_data = query_state.materialized_dataset(spec, fields)
           columns = spec.columns
 
           records.map do |record|
-            fields.each_with_object({}).each do |field, hash|
+            fields.each_with_object({}) do |field, hash|
               column = columns[field]
 
               value = if column.is_a?(Types::RubyColumn)
@@ -22,20 +22,12 @@ module Prato
                         column.format ? column.format.call(value) : value
                       end
 
-              assign_field(hash, field, value)
+              output_path = spec.field_mapping(field)
+              current = hash
+              output_path[0..-2].each { |key| current = (current[key] ||= {}) }
+              current[output_path.last] = value
             end
           end
-        end
-
-        private
-
-        def assign_field(result_set, field, value)
-          current = result_set
-          field[0...-1].each do |key|
-            current[key] ||= {}
-            current = current[key]
-          end
-          current[field.last] = value
         end
       end
     end

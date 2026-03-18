@@ -19,7 +19,7 @@ module Prato
         target_table = reflections.last.klass.arel_table
         base_table = base_model.arel_table
 
-        subquery = target_table.project(aggregate_expression(target_table, aggregate_function, aggregate_field))
+        subquery = target_table.project(aggregate_expression(target_table, @aggregate_function, aggregate_field))
 
         reflections.reverse_each.each_cons(2) do |child_ref, parent_ref|
           parent_table = parent_ref.klass.arel_table
@@ -38,7 +38,11 @@ module Prato
         )
 
         @arel_node = Arel::Nodes::Grouping.new(subquery)
-        @sql_alias = display_id.is_a?(Array) ? display_id.join("__") : display_id
+        @sql_alias = display_id.to_s
+      end
+
+      def select_node
+        @arel_node.as(@sql_alias)
       end
 
       def extract_value(record, _)

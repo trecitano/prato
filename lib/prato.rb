@@ -15,11 +15,11 @@ require_relative "prato/types/column"
 require_relative "prato/types/expression_column"
 require_relative "prato/types/aggregate_column"
 require_relative "prato/types/ruby_column"
-require_relative "prato/types/section"
 
 require_relative "prato/internal/lazy_loader_cache"
 require_relative "prato/internal/query_state"
 require_relative "prato/internal/specification"
+require_relative "prato/internal/specification_builder"
 
 require_relative "prato/internal/pipeline/filtering"
 require_relative "prato/internal/pipeline/pagination"
@@ -39,9 +39,8 @@ module Prato
 
     builder = TableBuilder.new
     builder.instance_exec(&block)
-    spec = builder.spec
 
-    spec.validate_and_update_keys!(base_model)
+    spec = builder.spec_builder.build(base_model)
 
     Table.new(spec)
   end

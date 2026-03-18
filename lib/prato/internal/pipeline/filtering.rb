@@ -25,7 +25,6 @@ module Prato
           case filter
           when Query::Filter
             column = spec.columns[filter.field]
-            raise ArgumentError, "Unknown filter field: #{filter.field}" unless column
             type = column.is_a?(Types::RubyColumn) ? :ruby : :sql
             DetailedFilter.new(type, filter)
           when Query::AndFilter, Query::OrFilter
@@ -125,7 +124,7 @@ module Prato
         def apply_ruby_filters(query_state, spec, detailed_filters)
           return query_state if detailed_filters.empty?
 
-          records, ruby_data = query_state.full_materialize(spec, spec.all_fields)
+          records, ruby_data = query_state.full_materialize(spec, spec.visible_fields)
 
           filtered = records.select do |record|
             detailed_filters.all? { |df| evaluate_ruby_filter(record, ruby_data, spec, df.filter) }

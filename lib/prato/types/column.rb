@@ -3,7 +3,7 @@
 module Prato
   module Types
     class Column
-      attr_reader :arel_node, :format
+      attr_reader :arel_node, :format, :association_path
 
       def initialize(accessor, format: nil)
         @accessor = accessor
@@ -11,11 +11,11 @@ module Prato
       end
 
       def resolve_arel!(base_model, display_id)
-        @sql_alias = display_id.is_a?(Array) ? display_id.join("__") : display_id.to_s
+        @sql_alias = display_id.to_s
 
         if @accessor.is_a?(Array) && @accessor.length > 1
-          association_path = @accessor[0..-2]
-          target_model = association_path.reduce(base_model) do |model, assoc|
+          @association_path = @accessor[0..-2]
+          target_model = @association_path.reduce(base_model) do |model, assoc|
             model.reflect_on_association(assoc).klass
           end
           @arel_node = target_model.arel_table[@accessor[-1]]

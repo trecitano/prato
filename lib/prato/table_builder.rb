@@ -3,33 +3,37 @@
 module Prato
   class TableBuilder
 
-    attr_reader :spec
+    attr_reader :spec_builder
 
     def initialize
-      @spec = Internal::Specification.new
+      @spec_builder = Internal::SpecificationBuilder.new
     end
 
     def column(*args, **kwargs)
-      @spec.inner_column(*args, **kwargs)
+      @spec_builder.inner_column(*args, **kwargs)
     end
 
     def ruby_column(*args, **kwargs)
-      @spec.inner_ruby_column(*args, **kwargs)
+      @spec_builder.inner_ruby_column(*args, **kwargs)
+    end
+
+    def query_column(*args, **kwargs)
+      @spec_builder.inner_query_column(*args, **kwargs)
     end
 
     def section(id, &block)
       raise ArgumentError, "Section requires a block" unless block_given?
       raise ArgumentError, "Section block must not accept arguments" unless block.parameters.empty?
 
-      @spec.inner_section(id, &block)
+      @spec_builder.inner_section(id, &block)
     end
 
     def ruby_loader(id, &block)
-      @spec.inner_ruby_loader(id, &block)
+      @spec_builder.inner_ruby_loader(id, &block)
     end
 
     def configure(config)
-      @spec.inner_config(config)
+      @spec_builder.inner_config(config)
     end
   end
 end

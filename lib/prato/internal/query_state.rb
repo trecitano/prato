@@ -43,8 +43,7 @@ module Prato
 
           case column
           when Types::AggregateColumn, Types::ExpressionColumn
-            sql_alias = field.is_a?(Array) ? field.join("__") : field.to_s
-            selects << column.arel_node.as(sql_alias)
+            selects << column.select_node
           when Types::Column
             if column.association_path
               association_paths << column.association_path
@@ -81,7 +80,7 @@ module Prato
 
         display_fields.each do |field|
           column = columns[field]
-          sql_alias = field.is_a?(Array) ? field.join("__") : field.to_s
+          sql_alias = field.to_s
 
           case column
           when Types::AggregateColumn, Types::ExpressionColumn

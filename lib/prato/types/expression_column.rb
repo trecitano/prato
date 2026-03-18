@@ -11,8 +11,12 @@ module Prato
       end
 
       def resolve_arel!(_base_model, display_id)
-        @sql_alias = display_id.is_a?(Array) ? display_id.join("__") : display_id.to_s
+        @sql_alias = display_id.to_s
         @arel_node = Arel::Nodes::Grouping.new(Arel.sql(expression))
+      end
+
+      def select_node
+        @arel_node.as(@sql_alias)
       end
 
       def extract_value(record, _)
