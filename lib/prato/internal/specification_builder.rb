@@ -13,7 +13,7 @@ module Prato
       end
 
       AGGREGATE_FUNCTIONS = %i[count sum avg min max].freeze
-      COMMON_RESERVED_KEYWORDS = %i[only except].freeze
+      COMMON_RESERVED_KEYWORDS = %i[only].freeze
       RESERVED_COLUMN_SYMBOLS = (%i[format expression] + COMMON_RESERVED_KEYWORDS + AGGREGATE_FUNCTIONS).freeze
       RESERVED_RUBY_COLUMN_SYMBOLS = (%i[loader key] + COMMON_RESERVED_KEYWORDS).freeze
 
@@ -47,9 +47,9 @@ module Prato
 
         section.spec.draft_columns.each do |nested|
           draft = if nested.override_name.nil?
-                    DraftColumn.new(nil, Query::FieldPath.from([id, nested.accessor_name]), nested.column, only: nested.only, except: nested.except)
+                    DraftColumn.new(nil, Query::FieldPath.from([id, nested.accessor_name]), nested.column, only: nested.only)
                   else
-                    DraftColumn.new(Query::FieldPath.from([id, nested.accessor_name]), nil, nested.column, only: nested.only, except: nested.except)
+                    DraftColumn.new(Query::FieldPath.from([id, nested.accessor_name]), nil, nested.column, only: nested.only)
                   end
 
           @draft_columns << draft
@@ -118,13 +118,12 @@ module Prato
       private
 
       def resolve_capability(capability, draft)
-        default = capability == :filter ? @config.default_filterable : @config.default_sortable
-        if draft.only
-          Array(draft.only).include?(capability)
-        elsif draft.except
-          !Array(draft.except).include?(capability)
+        only = draft.only || (draft.query_only ? nil : @config.default_only)
+
+        if only
+          only == capability
         else
-          default
+          true
         end
       end
 
@@ -144,12 +143,19 @@ module Prato
         raise ArgumentError, "Ruby loader '#{loader_name}' must respond to #call."
       end
 
+      VALID_COLUMN_ONLY = %i[display filter sort].freeze
+      VALID_QUERY_COLUMN_ONLY = %i[filter sort].freeze
+
       def build_draft(args, kwargs, query_only: false)
         only = kwargs.delete(:only)
-        except = kwargs.delete(:except)
 
-        if only && except
-          raise ArgumentError, "Cannot specify both only: and except: on the same column"
+        if only
+          raise ArgumentError, "only: must be a Symbol, got #{only.class}" unless only.is_a?(Symbol)
+
+          valid = query_only ? VALID_QUERY_COLUMN_ONLY : VALID_COLUMN_ONLY
+          unless valid.include?(only)
+            raise ArgumentError, "only: must be one of #{valid.map(&:inspect).join(", ")}, got #{only.inspect}"
+          end
         end
 
         name_map, options = extract_name_and_options(args, kwargs, RESERVED_COLUMN_SYMBOLS)
@@ -157,15 +163,15 @@ module Prato
 
         if aggregate_function
           column = ::Prato::Types::AggregateColumn.new(aggregate_function, aggregate_accessor, format: options[:format])
-          DraftColumn.new(nil, name_map, column, only: only, except: except, query_only: query_only)
+          DraftColumn.new(nil, name_map, column, only: only, query_only: query_only)
         elsif options[:expression]
           name, accessor = parse_name_map(name_map)
           column = ::Prato::Types::ExpressionColumn.new(options[:expression], format: options[:format])
-          DraftColumn.new(name, accessor, column, only: only, except: except, query_only: query_only)
+          DraftColumn.new(name, accessor, column, only: only, query_only: query_only)
         else
           name, accessor = parse_name_map(name_map)
           column = ::Prato::Types::Column.new(accessor, format: options[:format])
-          DraftColumn.new(name, accessor, column, only: only, except: except, query_only: query_only)
+          DraftColumn.new(name, accessor, column, only: only, query_only: query_only)
         end
       end
 
@@ -255,17 +261,18 @@ module Prato
       private_constant :RESERVED_RUBY_COLUMN_SYMBOLS
       private_constant :COMMON_RESERVED_KEYWORDS
       private_constant :AGGREGATE_FUNCTIONS
+      private_constant :VALID_COLUMN_ONLY
+      private_constant :VALID_QUERY_COLUMN_ONLY
     end
 
     class DraftColumn
-      attr_reader :override_name, :accessor_name, :column, :only, :except, :query_only
+      attr_reader :override_name, :accessor_name, :column, :only, :query_only
 
-      def initialize(override_name, accessor_name, column, only: nil, except: nil, query_only: false)
+      def initialize(override_name, accessor_name, column, only: nil, query_only: false)
         @override_name = override_name
         @accessor_name = accessor_name
         @column = column
         @only = only
-        @except = except
         @query_only = query_only
       end
     end

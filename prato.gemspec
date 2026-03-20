@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.name = "prato"
   spec.version = Prato::VERSION
   spec.authors = ["Valter Santos"]
-  spec.email = ["valter.c.santos@protonmail.com"]
+  spec.email = ["valter@trecitano.com"]
 
   spec.summary = "TODO: Write a short summary, because RubyGems requires one."
   spec.description = "TODO: Write a longer description or delete this line."
@@ -28,15 +28,7 @@ Gem::Specification.new do |spec|
         f.start_with?(*%w[bin/ Gemfile .gitignore test/ .github/ .rubocop.yml])
     end
   end
-  spec.bindir = "exe"
-  spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
   spec.add_dependency "activerecord", ">= 7.0"
-
-  # Uncomment to register a new dependency of your gem
-  # spec.add_dependency "example-gem", "~> 1.0"
-
-  # For more information and demo about making a new gem, check out our
-  # guide at: https://bundler.io/guides/creating_gem.html
 end

@@ -19,8 +19,7 @@ module Prato
                   :parameter_parser,
                   :default_page_size,
                   :maximum_page_size,
-                  :default_filterable,
-                  :default_sortable
+                  :default_only
 
     def initialize
       @key_transformation = :camelCase
@@ -28,8 +27,7 @@ module Prato
       @parameter_parser = Prato::Query::DefaultParser.new
       @default_page_size = 20
       @maximum_page_size = 100
-      @default_filterable = true
-      @default_sortable = true
+      @default_only = nil
     end
 
     KEY_TRANSFORMATION_OPTIONS = [ :camelCase, :snake_case, :none].freeze
@@ -55,16 +53,11 @@ module Prato
       @parameter_parser = parser
     end
 
-    def default_filterable=(value)
-      raise ArgumentError, "default_filterable must be a boolean" unless value == true || value == false
+    VALID_DEFAULT_ONLY = [:display, :filter, :sort].freeze
+    def default_only=(value)
+      raise ArgumentError, "default_only must be one of #{VALID_DEFAULT_ONLY.map(&:inspect).join(", ")}" unless VALID_DEFAULT_ONLY.include?(value)
 
-      @default_filterable = value
-    end
-
-    def default_sortable=(value)
-      raise ArgumentError, "default_sortable must be a boolean" unless value == true || value == false
-
-      @default_sortable = value
+      @default_only = value
     end
   end
 end

@@ -11,6 +11,7 @@ module Prato
 
     attr_accessor default_page_size: Integer
     attr_accessor maximum_page_size: Integer
+    attr_reader default_only: Symbol?
     attr_reader key_transformation: key_transformation
     attr_reader parameter_parser: _ParameterParser
 

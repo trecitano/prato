@@ -7,7 +7,7 @@ gemspec
 gem "irb"
 gem "rake", "~> 13.0"
 
-gem "minitest", "~> 5.16"
+gem "minitest", "~> 6.0.2"
 
 gem "activerecord", "~> 7.0"
 gem "sqlite3", "~> 1.7"

@@ -1,0 +1,39 @@
+module Prato
+  module Internal
+    class Specification
+      type column_type = Types::Column | Types::ExpressionColumn | Types::AggregateColumn | Types::RubyColumn
+      type filter_type = Query::Filter | Array[Query::Filter | Query::AndFilter | Query::OrFilter]
+
+      attr_reader columns: Hash[Symbol, column_type]
+      attr_reader ruby_loaders: Hash[Symbol, Proc]?
+      attr_reader config: Configuration
+
+      @visible_fields: Array[Symbol]
+      @filterable_fields: Set[Symbol]
+      @sortable_fields: Set[Symbol]
+      @output_paths: Hash[Symbol, Symbol | Array[Symbol]]
+
+      def initialize: (
+          columns: Hash[Symbol, column_type],
+          visible_fields: Set[Symbol],
+          filterable_fields: Set[Symbol],
+          sortable_fields: Set[Symbol],
+          output_paths: Hash[Symbol, Array[Symbol]],
+          ruby_loaders: Hash[Symbol, Proc]?,
+          config: Configuration
+        ) -> void
+
+      def visible_fields: () -> Set[Symbol]
+      def valid_parameters?: (Query::Parameters? params) -> bool
+      def sql_only?: (Array[Symbol] display_fields) -> bool
+
+      private
+
+      def valid_filters?: (filter_type? filters) -> bool
+      def valid_filter?: (Query::Filter | Query::AndFilter | Query::OrFilter filter) -> bool
+      def valid_sorts?: (Query::Sort | Array[Query::Sort] | nil sorts) -> bool?
+      def valid_fields?: (untyped fields) -> bool?
+
+    end
+  end
+end

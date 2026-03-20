@@ -4,7 +4,7 @@ module Prato
       @loader: Symbol
       @key: Symbol | Array[Symbol]
 
-      def initialize: (loader: Symbol, ?key: Symbol | Array[Symbol]) -> void
+      def initialize: (Symbol loader, ?key: Symbol | Array[Symbol]) -> void
     end
   end
 end
