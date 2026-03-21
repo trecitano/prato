@@ -2,25 +2,29 @@
 
 require "test_helper"
 
-def validate(table, key)
-  scope = User.where(name: "Alice")
-  output = table.to_table(scope)
-  assert_equal "Alice", output[:entries].first[key]
-end
+module TestPratoApiColumn
+  def validate(table, key)
+    scope = User.where(name: "Alice")
+    output = table.to_table(scope)
+    assert_equal "Alice", output[:entries].first[key]
+  end
 
-def validate_with_result(table, key, result)
-  scope = User.where(name: "Alice")
-  output = table.to_table(scope)
-  assert_equal result, output[:entries].first[key]
-end
+  def validate_with_result(table, key, result)
+    scope = User.where(name: "Alice")
+    output = table.to_table(scope)
+    assert_equal result, output[:entries].first[key]
+  end
 
-def validate_avg_result(table, key, result)
-  scope = User.where(name: "Alice")
-  output = table.to_table(scope)
-  assert_in_delta result, output[:entries].first[key].to_f, 0.01
+  def validate_avg_result(table, key, result)
+    scope = User.where(name: "Alice")
+    output = table.to_table(scope)
+    assert_in_delta result, output[:entries].first[key].to_f, 0.01
+  end
 end
 
 class TestApiColumnSingleArgument < Minitest::Test
+  include TestPratoApiColumn
+
   def test_single_argument
     table = Prato.table(User) do
       column(:name)
@@ -63,6 +67,8 @@ class TestApiColumnSingleArgument < Minitest::Test
 end
 
 class TestApiColumnLabelAndAccessor < Minitest::Test
+  include TestPratoApiColumn
+
   def test_two_arguments_symbol
     table = Prato.table(User) do
       column(:name, :name)
@@ -121,6 +127,8 @@ class TestApiColumnLabelAndAccessor < Minitest::Test
 end
 
 class TestApiColumnExpression < Minitest::Test
+  include TestPratoApiColumn
+
   def test_expression_basic_symbol
     table = Prato.table(User) do
       column(:double_age, expression: "users.age * 2")
@@ -211,6 +219,8 @@ class TestApiColumnExpression < Minitest::Test
 end
 
 class TestApiColumnCount < Minitest::Test
+  include TestPratoApiColumn
+
   def test_count_basic_symbol
     table = Prato.table(User) do
       column(:post_count, count: :posts)
@@ -287,6 +297,8 @@ class TestApiColumnCount < Minitest::Test
 end
 
 class TestApiColumnSum < Minitest::Test
+  include TestPratoApiColumn
+
   def test_sum_basic_symbol
     table = Prato.table(User) do
       column(:post_score, sum: %i[posts score])
@@ -363,6 +375,8 @@ class TestApiColumnSum < Minitest::Test
 end
 
 class TestApiColumnAvg < Minitest::Test
+  include TestPratoApiColumn
+
   def test_avg_basic_symbol
     table = Prato.table(User) do
       column(:avg_post_score, avg: %i[posts score])
@@ -439,6 +453,8 @@ class TestApiColumnAvg < Minitest::Test
 end
 
 class TestApiColumnMin < Minitest::Test
+  include TestPratoApiColumn
+
   def test_min_basic_symbol
     table = Prato.table(User) do
       column(:min_post_score, min: %i[posts score])
@@ -515,6 +531,8 @@ class TestApiColumnMin < Minitest::Test
 end
 
 class TestApiColumnMax < Minitest::Test
+  include TestPratoApiColumn
+
   def test_max_basic_symbol
     table = Prato.table(User) do
       column(:max_post_score, max: %i[posts score])
@@ -591,6 +609,7 @@ class TestApiColumnMax < Minitest::Test
 end
 
 class TestApiColumnSingleArgumentHash < Minitest::Test
+  include TestPratoApiColumn
 
   def test_hash_symbol
     table = Prato.table(User) do
@@ -644,6 +663,8 @@ class TestApiColumnSingleArgumentHash < Minitest::Test
 end
 
 class TestApiColumnReservedKeywordNames < Minitest::Test
+  include TestPratoApiColumn
+
   def test_column_named_format
     table = Prato.table(User) do
       column(:format, :name)

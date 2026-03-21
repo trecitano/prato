@@ -13,8 +13,8 @@ module Prato
       @spec_builder.inner_column(*args, **kwargs)
     end
 
-    def ruby_column(*args, **kwargs)
-      @spec_builder.inner_ruby_column(*args, **kwargs)
+    def ruby_column(*args, **kwargs, &block)
+      @spec_builder.inner_ruby_column(*args, **kwargs, &block)
     end
 
     def query_column(*args, **kwargs)

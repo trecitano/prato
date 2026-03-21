@@ -15,7 +15,7 @@ module Prato
       AGGREGATE_FUNCTIONS = %i[count sum avg min max].freeze
       COMMON_RESERVED_KEYWORDS = %i[only].freeze
       RESERVED_COLUMN_SYMBOLS = (%i[format expression] + COMMON_RESERVED_KEYWORDS + AGGREGATE_FUNCTIONS).freeze
-      RESERVED_RUBY_COLUMN_SYMBOLS = (%i[loader key] + COMMON_RESERVED_KEYWORDS).freeze
+      RESERVED_RUBY_COLUMN_SYMBOLS = ([:key] + COMMON_RESERVED_KEYWORDS).freeze
 
       def inner_column(*args, **kwargs)
         draft = build_draft(args, kwargs)
@@ -27,15 +27,15 @@ module Prato
         @draft_columns << draft
       end
 
-      def inner_ruby_column(*args, **kwargs)
-        name_map, = extract_name_and_options(args, kwargs, RESERVED_RUBY_COLUMN_SYMBOLS)
-        parse_name_map(name_map)
+      def inner_ruby_column(*args, **kwargs, &block)
+        name_map, options = extract_name_and_options(args, kwargs, RESERVED_RUBY_COLUMN_SYMBOLS)
+        display_name, loader_id = parse_name_map(name_map)
 
-        name, loader = parse_name_map(name_map)
-        accessor = parse_accessor(key)
-        column = ::Prato::Types::RubyColumn.new(loader, key: accessor)
+        key = parse_accessor(options[:key])
+        column = ::Prato::Types::RubyColumn.new(loader_id, key: key)
 
-        @draft_columns << DraftColumn.new(name, nil, column)
+        @draft_columns << DraftColumn.new(display_name, loader_id, column)
+        inner_ruby_loader(loader_id, &block) if block_given?
       end
 
       def inner_section(id, &block)
@@ -252,18 +252,18 @@ module Prato
         end
       end
 
+      def to_snake_case(value)
+        s = value.to_s.dup
+        s.gsub!(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
+        s.gsub!(/([a-z\d])([A-Z])/, '\1_\2')
+        s.tr!("-", "_")
+        s.downcase!
+        s
+      end
+
       def to_camel_case(value)
         parts = to_snake_case(value).split("_")
         parts.first + parts.drop(1).map(&:capitalize).join
-      end
-
-      def to_snake_case(value)
-        value
-          .to_s
-          .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
-          .gsub(/([a-z\d])([A-Z])/, '\1_\2')
-          .tr("-", "_")
-          .downcase
       end
 
       private_constant :RESERVED_COLUMN_SYMBOLS
