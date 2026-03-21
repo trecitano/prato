@@ -46,10 +46,11 @@ module Prato
         section.instance_exec(&block)
 
         section.spec.draft_columns.each do |nested|
+          joined_name = Prato::Query::FieldPath.from([id, nested.accessor_name])
           draft = if nested.override_name.nil?
-                    DraftColumn.new(nil, Query::FieldPath.from([id, nested.accessor_name]), nested.column, only: nested.only)
+                    DraftColumn.new(nil, joined_name, nested.column, only: nested.only)
                   else
-                    DraftColumn.new(Query::FieldPath.from([id, nested.accessor_name]), nil, nested.column, only: nested.only)
+                    DraftColumn.new(joined_name, nil, nested.column, only: nested.only)
                   end
 
           @draft_columns << draft
@@ -72,30 +73,26 @@ module Prato
         sortable_fields = Set.new
 
         @draft_columns.each do |draft|
-          column_display_id = transform_draft_name(draft)
-          validate_ruby_loader!(draft, @ruby_loaders) unless draft.query_only
+          raw_column_name = raw_column_name(draft)
+          internal_column_name = raw_column_name.to_s.tr(" ", "_").delete("^A-Za-z0-9_")
 
-          if columns.key?(column_display_id)
-            raise ArgumentError, "Column '#{column_display_id}' has already been defined."
+          if columns.key?(internal_column_name)
+            raise ArgumentError, "Column '#{raw_column_name}' has already been defined."
           end
 
           column = draft.column
 
           if column.is_a?(Types::Column) || column.is_a?(Types::ExpressionColumn) || column.is_a?(Types::AggregateColumn)
-            column.resolve_arel!(base_model, column_display_id)
+            column.resolve_arel!(base_model, internal_column_name)
           end
 
           filterable = resolve_capability(:filter, draft)
           sortable = resolve_capability(:sort, draft)
 
-          if draft.query_only && !filterable && !sortable
-            raise ArgumentError, "query_column '#{column_display_id}' must be filterable or sortable"
-          end
-
-          columns[column_display_id] = column
-          visible_fields << column_display_id unless draft.query_only
-          filterable_fields << column_display_id if filterable
-          sortable_fields << column_display_id if sortable
+          columns[internal_column_name] = column
+          visible_fields << internal_column_name unless draft.query_only
+          filterable_fields << internal_column_name if filterable
+          sortable_fields << internal_column_name if sortable
         end
 
         output_paths = {}
@@ -160,24 +157,23 @@ module Prato
 
         name_map, options = extract_name_and_options(args, kwargs, RESERVED_COLUMN_SYMBOLS)
         aggregate_function, aggregate_accessor = extract_aggregate(options)
+        override_name, accessor = parse_name_map(name_map)
 
         if aggregate_function
           column = ::Prato::Types::AggregateColumn.new(aggregate_function, aggregate_accessor, format: options[:format])
-          DraftColumn.new(nil, name_map, column, only: only, query_only: query_only)
+          DraftColumn.new(override_name, nil, column, only: only, query_only: query_only)
         elsif options[:expression]
-          name, accessor = parse_name_map(name_map)
           column = ::Prato::Types::ExpressionColumn.new(options[:expression], format: options[:format])
-          DraftColumn.new(name, accessor, column, only: only, query_only: query_only)
+          DraftColumn.new(override_name, accessor, column, only: only, query_only: query_only)
         else
-          name, accessor = parse_name_map(name_map)
           column = ::Prato::Types::Column.new(accessor, format: options[:format])
-          DraftColumn.new(name, accessor, column, only: only, query_only: query_only)
+          DraftColumn.new(override_name, accessor, column, only: only, query_only: query_only)
         end
       end
 
       def extract_name_and_options(args, kwargs, reserved)
         if args.any?
-          [args.first, kwargs]
+          [args, kwargs]
         else
           option_keys = kwargs.keys & reserved
           options = kwargs.slice(*option_keys)
@@ -196,8 +192,14 @@ module Prato
 
       def parse_name_map(name_map)
         case name_map
-        when Symbol, Array
+        when Symbol
           [nil, name_map]
+        when Array
+          if name_map.size == 2
+            [name_map.first, name_map.second]
+          else
+            [nil, name_map.first]
+          end
         when Hash
           entry = name_map.first
           [entry.first, entry.second]
@@ -231,8 +233,8 @@ module Prato
         end
       end
 
-      def transform_draft_name(draft)
-        (draft.override_name || draft.accessor_name).to_sym
+      def raw_column_name(draft)
+        (draft.override_name || draft.accessor_name)
       end
 
       def transform_key_part(part, transformation)

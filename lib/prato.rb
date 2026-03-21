@@ -7,6 +7,7 @@ require_relative "prato/query/sort"
 require_relative "prato/query/and_filter"
 require_relative "prato/query/or_filter"
 require_relative "prato/query/parameters"
+require_relative "prato/query/field_path"
 require_relative "prato/query/default_parser"
 
 require_relative "prato/configuration"

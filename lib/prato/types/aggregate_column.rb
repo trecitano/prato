@@ -5,8 +5,8 @@ module Prato
     class AggregateColumn
       attr_reader :arel_node, :format
 
-      def initialize(aggregate_function, accessor, format: nil)
-        @accessor = Array(accessor)
+      def initialize(aggregate_function, aggregate_accessor, format: nil)
+        @accessor = Array(aggregate_accessor)
         @aggregate_function = aggregate_function
         @format = format
       end

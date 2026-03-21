@@ -5,7 +5,7 @@ module Prato
     # Module that handles converting user input fields into internal fields.
     module FieldPath
       # We use this separator to flatten the keys
-      SEPARATOR = "__".freeze
+      SEPARATOR = "___".freeze
 
       def self.from(parts)
         parts = Array(parts)
