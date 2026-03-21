@@ -84,7 +84,7 @@ class TestApiColumnLabelAndAccessor < Minitest::Test
       column("Specific Name", :name)
     end
 
-    validate(table, "Specific Name")
+    validate(table, :"Specific Name")
   end
 
   def test_two_arguments_format
@@ -92,7 +92,7 @@ class TestApiColumnLabelAndAccessor < Minitest::Test
       column("Specific Name", :name, format: lambda(&:upcase))
     end
 
-    validate_with_result(table, "Specific Name", "ALICE")
+    validate_with_result(table, :"Specific Name", "ALICE")
   end
 
   def test_two_arguments_only_display
@@ -134,7 +134,7 @@ class TestApiColumnExpression < Minitest::Test
       column("Double age!", expression: "users.age * 2")
     end
 
-    validate_with_result(table, "Double age!", 60)
+    validate_with_result(table, :"Double age!", 60)
   end
 
   def test_expression_format
@@ -182,7 +182,7 @@ class TestApiColumnExpression < Minitest::Test
       column("Double age!", expression: "users.age * 2", format: ->(value) { value * 10 }, only: :filter)
     end
 
-    validate_with_result(table, "Double age!", 600)
+    validate_with_result(table, :"Double age!", 600)
   end
 
   def test_expression_sql_function
@@ -224,7 +224,7 @@ class TestApiColumnCount < Minitest::Test
       column("Super count!", count: :posts)
     end
 
-    validate_with_result(table, "Super count!", 4)
+    validate_with_result(table, :"Super count!", 4)
   end
 
   def test_count_format
@@ -272,7 +272,7 @@ class TestApiColumnCount < Minitest::Test
       column("Super count!", count: :posts, format: ->(value) { value * 10 }, only: :filter)
     end
 
-    validate_with_result(table, "Super count!", 40)
+    validate_with_result(table, :"Super count!", 40)
   end
 
   def test_count_deep_association
@@ -300,7 +300,7 @@ class TestApiColumnSum < Minitest::Test
       column("Post score.", sum: %i[posts score])
     end
 
-    validate_with_result(table, "Post score.", 14)
+    validate_with_result(table, :"Post score.", 14)
   end
 
   def test_sum_format
@@ -348,7 +348,7 @@ class TestApiColumnSum < Minitest::Test
       column("Post score.", sum: %i[posts score], format: ->(value) { value * 20 }, only: :filter)
     end
 
-    validate_with_result(table, "Post score.", 280)
+    validate_with_result(table, :"Post score.", 280)
   end
 
   def test_sum_deep_association
@@ -376,7 +376,7 @@ class TestApiColumnAvg < Minitest::Test
       column("Avg score.", avg: %i[posts score])
     end
 
-    validate_avg_result(table, "Avg score.", 3.5)
+    validate_avg_result(table, :"Avg score.", 3.5)
   end
 
   def test_avg_format
@@ -424,7 +424,7 @@ class TestApiColumnAvg < Minitest::Test
       column("Avg score.", avg: %i[posts score], format: ->(value) { value * 20 }, only: :filter)
     end
 
-    validate_avg_result(table, "Avg score.", 70)
+    validate_avg_result(table, :"Avg score.", 70)
   end
 
   def test_avg_deep_association
@@ -452,7 +452,7 @@ class TestApiColumnMin < Minitest::Test
       column("Min score.", min: %i[posts score])
     end
 
-    validate_with_result(table, "Min score.", 2)
+    validate_with_result(table, :"Min score.", 2)
   end
 
   def test_min_format
@@ -500,7 +500,7 @@ class TestApiColumnMin < Minitest::Test
       column("Min score.", min: %i[posts score], format: ->(value) { value * 20 }, only: :filter)
     end
 
-    validate_with_result(table, "Min score.", 40)
+    validate_with_result(table, :"Min score.", 40)
   end
 
   def test_min_deep_association
@@ -528,7 +528,7 @@ class TestApiColumnMax < Minitest::Test
       column("Max score.", max: %i[posts score])
     end
 
-    validate_with_result(table, "Max score.", 5)
+    validate_with_result(table, :"Max score.", 5)
   end
 
   def test_max_format
@@ -576,7 +576,7 @@ class TestApiColumnMax < Minitest::Test
       column("Max score.", max: %i[posts score], format: ->(value) { value * 20 }, only: :filter)
     end
 
-    validate_with_result(table, "Max score.", 100)
+    validate_with_result(table, :"Max score.", 100)
   end
 
   def test_max_deep_association
@@ -606,7 +606,7 @@ class TestApiColumnSingleArgumentHash < Minitest::Test
       column("This is a string!" => :name)
     end
 
-    validate(table, "This is a string!")
+    validate(table, :"This is a string!")
   end
 
   def test_hash_format
@@ -713,7 +713,7 @@ class TestApiColumnReservedKeywordNames < Minitest::Test
       column("format", :name)
     end
 
-    validate(table, "format")
+    validate(table, :format)
   end
 
   def test_column_named_only_with_string
@@ -721,6 +721,6 @@ class TestApiColumnReservedKeywordNames < Minitest::Test
       column("only", :name)
     end
 
-    validate(table, "only")
+    validate(table, :only)
   end
 end

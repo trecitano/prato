@@ -43,9 +43,13 @@ module Prato
           end
 
           rows = scope.pluck(*selects)
+
           rows.map do |data|
             fields.each_with_object({}).with_index do |(field, hash), idx|
-              value = data[idx]
+              column = columns[field]
+
+              value = Array(data)[idx]
+              value = column.format.call(value) if column.format
 
               assign_value(hash, spec, field, value)
             end
