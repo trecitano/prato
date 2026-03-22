@@ -8,6 +8,16 @@ module Prato
 
     def self.config: () -> Configuration
     def self.configure: () { (Configuration) -> void } -> Configuration
+    def self.with_settings: (
+      ?Configuration? base,
+      ?key_transformation: key_transformation?,
+      ?on_invalid_input: (:empty | :raise)?,
+      ?parameter_parser: _ParameterParser?,
+      ?default_page_size: Integer?,
+      ?maximum_page_size: Integer?,
+      ?default_only: (:display | :filter | :sort)?,
+      ?default_ruby_column_only: (:display | :filter | :sort)?
+    ) -> Configuration
 
     attr_accessor default_page_size: Integer
     attr_accessor maximum_page_size: Integer

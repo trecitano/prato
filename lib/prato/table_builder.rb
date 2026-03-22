@@ -32,8 +32,9 @@ module Prato
       @spec_builder.inner_ruby_loader(id, &block)
     end
 
-    def configure(config)
-      @spec_builder.inner_config(config)
+    def configure(config = nil, **overrides)
+      resolved_config = Configuration.with_settings(config, **overrides)
+      @spec_builder.inner_config(resolved_config)
     end
   end
 end

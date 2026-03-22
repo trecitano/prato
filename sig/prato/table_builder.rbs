@@ -32,12 +32,21 @@ module Prato
       | (**(Symbol | Array[Symbol] | formatter)) -> void
 
     def ruby_column:
-      (Symbol label, ?key: Symbol) -> void
-      | (Symbol | String label, Symbol loader, ?key: Symbol) -> void
+      (Symbol | String loader_label, ?key: Symbol) -> void
+      | (Symbol | String label, Symbol loader_id, ?key: Symbol) -> void
       | (**Symbol) -> void
 
     def section: (Symbol | String id) { () -> void } -> void
     def ruby_loader: (Symbol id) { (Array[ActiveRecord::Base] records, Hash[Symbol, untyped] loaded_data) -> untyped } -> void
-    def configure: (Configuration config) -> void
+    def configure: (
+      ?Configuration? config,
+      ?key_transformation: Configuration::key_transformation?,
+      ?on_invalid_input: (:empty | :raise)?,
+      ?parameter_parser: Configuration::_ParameterParser?,
+      ?default_page_size: Integer?,
+      ?maximum_page_size: Integer?,
+      ?default_only: (:display | :filter | :sort)?,
+      ?default_ruby_column_only: (:display | :filter | :sort)?
+    ) -> void
   end
 end

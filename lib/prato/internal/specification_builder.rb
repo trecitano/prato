@@ -257,6 +257,7 @@ module Prato
         s.gsub!(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
         s.gsub!(/([a-z\d])([A-Z])/, '\1_\2')
         s.tr!("-", "_")
+        s.tr!(" ", "_")
         s.downcase!
         s
       end

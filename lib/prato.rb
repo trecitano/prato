@@ -46,7 +46,11 @@ module Prato
     Table.new(spec)
   end
 
-  def setup
-    Configuration.new
+  def setup(&block)
+    if block_given?
+      Configuration.configure(&block)
+    else
+      Configuration.new
+    end
   end
 end

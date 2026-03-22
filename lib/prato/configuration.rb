@@ -12,6 +12,27 @@ module Prato
         yield(config) if block_given?
         config
       end
+
+      def with_settings(
+        base = nil,
+        key_transformation: nil,
+        on_invalid_input: nil,
+        parameter_parser: nil,
+        default_page_size: nil,
+        maximum_page_size: nil,
+        default_only: nil,
+        default_ruby_column_only: nil
+      )
+        copy = (base || config).dup
+        copy.key_transformation = key_transformation if key_transformation
+        copy.on_invalid_input = on_invalid_input if on_invalid_input
+        copy.parameter_parser = parameter_parser if parameter_parser
+        copy.default_page_size = default_page_size if default_page_size
+        copy.maximum_page_size = maximum_page_size if maximum_page_size
+        copy.default_only = default_only if default_only
+        copy.default_ruby_column_only = default_ruby_column_only if default_ruby_column_only
+        copy
+      end
     end
 
     attr_accessor :key_transformation,
@@ -19,7 +40,8 @@ module Prato
                   :parameter_parser,
                   :default_page_size,
                   :maximum_page_size,
-                  :default_only
+                  :default_only,
+                  :default_ruby_column_only
 
     def initialize
       @key_transformation = :camelCase
@@ -28,6 +50,7 @@ module Prato
       @default_page_size = 20
       @maximum_page_size = 100
       @default_only = nil
+      @default_ruby_column_only = :display
     end
 
     KEY_TRANSFORMATION_OPTIONS = [ :camelCase, :snake_case, :none].freeze
