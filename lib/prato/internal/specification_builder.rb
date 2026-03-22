@@ -51,9 +51,9 @@ module Prato
           draft = DraftColumn.new(nested_draft.override_name,
                                   nested_draft.accessor_name,
                                   nested_draft.column,
-                                  nested_draft.only,
-                                  nested_draft.query_only,
-                                  new_output_path)
+                                  only: nested_draft.only,
+                                  query_only: nested_draft.query_only,
+                                  output_paths: new_output_path)
 
           @draft_columns << draft
         end
@@ -76,11 +76,11 @@ module Prato
         output_paths = {}
 
         @draft_columns.each do |draft|
-          raw_column_name = raw_column_name(draft)
-          internal_column_name = raw_column_name.to_s.tr(" ", "_").delete("^A-Za-z0-9_").to_sym
+          column_output_path = draft.output_paths.map { |path| transform_key_part(path, @config.key_transformation).to_sym}
+          internal_column_name = Query::FieldPath.join(draft.output_paths)
 
           if columns.key?(internal_column_name)
-            raise ArgumentError, "Column '#{raw_column_name}' has already been defined."
+            raise ArgumentError, "Column '#{draft.name}' (internal id: #{internal_column_name}) has already been defined."
           end
 
           column = draft.column
@@ -96,13 +96,6 @@ module Prato
           visible_fields << internal_column_name unless draft.query_only
           filterable_fields << internal_column_name if filterable
           sortable_fields << internal_column_name if sortable
-
-          column_output_path = []
-          draft.output_paths.each do |part|
-            path = transform_key_part(part, @config.key_transformation).to_sym
-            column_output_path << path
-          end
-          column_output_path << transform_key_part(raw_column_name, @config.key_transformation).to_sym
           output_paths[internal_column_name] = column_output_path
         end
 
@@ -238,10 +231,6 @@ module Prato
         end
       end
 
-      def raw_column_name(draft)
-        (draft.override_name || draft.accessor_name)
-      end
-
       def transform_key_part(part, transformation)
         return part if part.is_a?(String)
 
@@ -278,13 +267,17 @@ module Prato
     class DraftColumn
       attr_reader :override_name, :accessor_name, :column, :only, :query_only, :output_paths
 
-      def initialize(override_name, accessor_name, column, only: nil, query_only: false)
+      def initialize(override_name, accessor_name, column, only: nil, query_only: false, output_paths: [])
         @override_name = override_name
         @accessor_name = accessor_name
         @column = column
         @only = only
         @query_only = query_only
-        @output_paths = []
+        @output_paths = output_paths.empty? ? [name] : output_paths
+      end
+
+      def name
+        @override_name || @accessor_name
       end
     end
 

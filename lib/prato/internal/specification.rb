@@ -50,7 +50,7 @@ module Prato
       def valid_filter?(filter)
         case filter
         when Query::Filter
-          false unless @filterable_fields.include?(filter.field)
+          @filterable_fields.include?(filter.field)
         when Query::AndFilter, Query::OrFilter
           filter.filters.all? { |f| valid_filter?(f) }
         end

@@ -21,20 +21,19 @@ module Prato
 
         subquery = target_table.project(aggregate_expression(target_table, @aggregate_function, aggregate_field))
 
-        reflections.reverse_each.each_cons(2) do |child_ref, parent_ref|
-          parent_table = parent_ref.klass.arel_table
-          subquery = subquery.join(parent_table).on(
-            parent_table[parent_ref.klass.primary_key].eq(
-              child_ref.klass.arel_table[child_ref.foreign_key]
-            )
+        models = [base_model] + reflections.map(&:klass)
+
+        (reflections.length - 1).downto(1) do |i|
+          ref = reflections[i]
+          source_table = models[i].arel_table
+          subquery = subquery.join(source_table).on(
+            association_condition(ref, source_table, ref.klass.arel_table)
           )
         end
 
         first_ref = reflections.first
         subquery = subquery.where(
-          first_ref.klass.arel_table[first_ref.foreign_key].eq(
-            base_table[first_ref.active_record_primary_key]
-          )
+          association_condition(first_ref, base_table, first_ref.klass.arel_table)
         )
 
         @arel_node = Arel::Nodes::Grouping.new(subquery)
@@ -59,6 +58,18 @@ module Prato
 
           current_model = reflection.klass
           reflection
+        end
+      end
+
+      def association_condition(reflection, source_table, target_table)
+        if reflection.macro == :belongs_to
+          source_table[reflection.foreign_key].eq(
+            target_table[reflection.active_record_primary_key]
+          )
+        else
+          target_table[reflection.foreign_key].eq(
+            source_table[reflection.active_record_primary_key]
+          )
         end
       end
 

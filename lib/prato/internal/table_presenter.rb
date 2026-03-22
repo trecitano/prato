@@ -27,6 +27,7 @@ module Prato
       private
 
       def resolve_parameters(input, config)
+        return nil if input.nil?
         return input if input.is_a?(Query::Parameters)
 
         config.parameter_parser.parse_parameters(input)
