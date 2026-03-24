@@ -43,7 +43,7 @@ module Prato
           case filter
           when Query::Filter
             column = spec.columns[filter.field]
-            scope = ensure_joins(query_state.dataset, column)
+            scope = ensure_joins(query_state.dataset, column, filter.operator)
             condition = build_operator_condition(column.arel_node, filter.operator, filter.value)
             query_state.with_dataset(scope.where(condition))
           when Query::AndFilter
@@ -94,9 +94,16 @@ module Prato
           end
         end
 
-        def ensure_joins(scope, column)
+        def ensure_joins(scope, column, operator)
           return scope unless column.is_a?(Types::Column) && column.association_path
-          scope.joins(build_join_hash(column.association_path))
+
+          join_hash = build_join_hash(column.association_path)
+          
+          if operator == :not_present
+            scope.left_joins(join_hash)
+          else
+            scope.joins(join_hash)
+          end
         end
 
         def ensure_joins_for_filters(scope, spec, filters)
@@ -104,7 +111,7 @@ module Prato
             case filter
             when Query::Filter
               column = spec.columns[filter.field]
-              scope = ensure_joins(scope, column)
+              scope = ensure_joins(scope, column, filter.operator)
             when Query::AndFilter, Query::OrFilter
               scope = ensure_joins_for_filters(scope, spec, filter.filters)
             end

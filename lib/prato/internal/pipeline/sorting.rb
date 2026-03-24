@@ -27,7 +27,7 @@ module Prato
 
           sorts.each do |sort|
             column = spec.columns[sort.field]
-            scope = ensure_joins(scope, column)
+            scope = ensure_left_joins(scope, column)
             order = sort.order == :desc ? column.arel_node.desc : column.arel_node.asc
             scope = scope.order(order)
           end
@@ -61,9 +61,9 @@ module Prato
           a <=> b
         end
 
-        def ensure_joins(scope, column)
+        def ensure_left_joins(scope, column)
           return scope unless column.is_a?(Types::Column) && column.association_path
-          scope.joins(build_join_hash(column.association_path))
+          scope.left_joins(build_join_hash(column.association_path))
         end
 
         def build_join_hash(path)

@@ -10,16 +10,16 @@ module TestFiltering
       column(:score)
 
       # 1-level deep associations
-      column(post_title: [:post, :title])
-      column(author_name: [:user, :name])
+      column(post_title: %i[post title])
+      column(author_name: %i[user name])
 
       # 2-levels deep associations
-      column(post_author: [:post, :user, :name])
-      column(post_category: [:post, :category, :name])
+      column(post_author: %i[post user name])
+      column(post_category: %i[post category name])
 
       # 3-levels deep associations
-      column(post_author_company: [:post, :user, :company, :name])
-      column(post_parent_category: [:post, :category, :parent_category, :name])
+      column(post_author_company: %i[post user company name])
+      column(post_parent_category: %i[post category parent_category name])
 
       # Expression column
       column(:score_doubled, expression: "comments.score * 2")
@@ -33,22 +33,22 @@ module TestFiltering
       column(:score_sort_only, expression: "comments.score", only: :sort)
 
       # Aggregates
-      column(:user_post_count, count: [:user, :posts])
-      column(:user_max_post_score, max: [:user, :posts, :score])
-      column(:user_min_post_score, min: [:user, :posts, :score])
-      column(:user_total_post_score, sum: [:user, :posts, :score])
-      column(:user_avg_post_score, avg: [:user, :posts, :score])
+      column(:user_post_count, count: %i[user posts])
+      column(:user_max_post_score, max: %i[user posts score])
+      column(:user_min_post_score, min: %i[user posts score])
+      column(:user_total_post_score, sum: %i[user posts score])
+      column(:user_avg_post_score, avg: %i[user posts score])
 
       # Sections
       section(:post_info) do
-        column(title: [:post, :title])
-        column(published: [:post, :published])
+        column(title: %i[post title])
+        column(published: %i[post published])
 
         section(:category) do
-          column(name: [:post, :category, :name])
+          column(name: %i[post category name])
 
           section(:parent) do
-            column(name: [:post, :category, :parent_category, :name])
+            column(name: %i[post category parent_category name])
           end
         end
       end
@@ -82,17 +82,7 @@ module TestFiltering
   end
 end
 
-class TestFiltering < Minitest::Test
-  def setup
-    @table = Prato.table(User) do
-      column(:name)
-      column(:email)
-      column(:age)
-      column(:active)
-      column(company_name: [:company, :name])
-    end
-  end
-
+class TestFilteringOperators < Minitest::Test
   # --- :eq ---
 
   def test_filter_eq_string
@@ -145,7 +135,7 @@ class TestFiltering < Minitest::Test
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Bob", "Carol"], names
+    assert_equal %w[Bob Carol], names
   end
 
   def test_filter_gt
@@ -161,7 +151,7 @@ class TestFiltering < Minitest::Test
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Alice", "Dave"], names
+    assert_equal %w[Alice Dave], names
   end
 
   # --- :present / :not_present ---
@@ -171,7 +161,7 @@ class TestFiltering < Minitest::Test
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Alice", "Bob", "Carol"], names
+    assert_equal %w[Alice Bob Carol], names
   end
 
   def test_filter_not_present
@@ -185,19 +175,19 @@ class TestFiltering < Minitest::Test
   # --- :in / :not_in ---
 
   def test_filter_in
-    filter = Prato::Query::Filter.new(:name, :in, ["Alice", "Bob"])
+    filter = Prato::Query::Filter.new(:name, :in, %w[Alice Bob])
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Alice", "Bob"], names
+    assert_equal %w[Alice Bob], names
   end
 
   def test_filter_not_in
-    filter = Prato::Query::Filter.new(:name, :not_in, ["Alice", "Bob"])
+    filter = Prato::Query::Filter.new(:name, :not_in, %w[Alice Bob])
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Carol", "Dave"], names
+    assert_equal %w[Carol Dave], names
   end
 
   # --- :contains / :not_contains ---
@@ -215,7 +205,7 @@ class TestFiltering < Minitest::Test
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Bob", "Carol", "Dave"], names
+    assert_equal %w[Bob Carol Dave], names
   end
 
   # --- :between / :not_between ---
@@ -225,7 +215,7 @@ class TestFiltering < Minitest::Test
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Alice", "Carol"], names
+    assert_equal %w[Alice Carol], names
   end
 
   def test_filter_not_between
@@ -233,7 +223,7 @@ class TestFiltering < Minitest::Test
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Bob", "Dave"], names
+    assert_equal %w[Bob Dave], names
   end
 
   # --- :between_exclusive / :not_between_exclusive ---
@@ -244,7 +234,7 @@ class TestFiltering < Minitest::Test
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Alice", "Carol"], names
+    assert_equal %w[Alice Carol], names
   end
 
   def test_filter_not_between_exclusive
@@ -252,7 +242,7 @@ class TestFiltering < Minitest::Test
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Bob", "Dave"], names
+    assert_equal %w[Bob Dave], names
   end
 
   # --- Multiple filters (AND) ---
@@ -265,7 +255,7 @@ class TestFiltering < Minitest::Test
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filters))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Alice", "Dave"], names
+    assert_equal %w[Alice Dave], names
   end
 
   # --- No matches ---
@@ -287,27 +277,68 @@ class TestFilteringAssociations < Minitest::Test
   def test_filter_on_association_column
     table = Prato.table(User) do
       column(:name)
-      column(company_name: [:company, :name])
+      column(company_name: %i[company name])
     end
 
     filter = Prato::Query::Filter.new(:companyName, :eq, "Acme Corp")
     result = table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Alice", "Bob"], names
+    assert_equal %w[Alice Bob], names
   end
 
   def test_filter_contains_on_association
     table = Prato.table(Post) do
       column(:title)
-      column(author: [:user, :name])
+      column(author: %i[user name])
     end
 
     filter = Prato::Query::Filter.new(:author, :contains, "Ali")
     result = table.to_table(Post.all, params: Prato::Query::Parameters.new(filters: filter))
 
-    assert result[:entries].all? { |e| e[:author] == "Alice" }
+    assert(result[:entries].all? { |e| e[:author] == "Alice" })
     assert_equal 4, result[:entries].length
+  end
+end
+
+class TestFilteringCommentAssociations < Minitest::Test
+  include TestFiltering
+
+  def test_filter_present_on_self_referential_association_returns_parent_category_value
+    result = filtered_comment_association_result(:present, nil)
+
+    assert_equal 9, result[:entries].length
+    assert_equal(
+      [%w[Ruby Technology]],
+      result[:entries].map { |e| [e[:postCategory], e[:postParentCategory]] }.uniq
+    )
+  end
+
+  def test_filter_not_present_on_self_referential_association_keeps_nil_parent_categories
+    result = filtered_comment_association_result(:not_present, nil)
+
+    assert_equal 14, result[:entries].length
+    assert_equal(
+      [["Technology", nil], ["General", nil]],
+      result[:entries].map { |e| [e[:postCategory], e[:postParentCategory]] }.uniq
+    )
+  end
+
+  def test_filter_eq_on_self_referential_association_does_not_match_child_category_name
+    result = filtered_comment_association_result(:eq, "Ruby")
+
+    assert_equal [], result[:entries]
+  end
+
+  private
+
+  def filtered_comment_association_result(operator, value)
+    params = Prato::Query::Parameters.new(
+      filters: Prato::Query::Filter.new(:post_parent_category, operator, value),
+      fields: %i[post_category post_parent_category]
+    )
+
+    @table.to_table(Comment.all, params: params)
   end
 end
 
@@ -332,7 +363,7 @@ class TestFilteringComposite < Minitest::Test
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: or_filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Alice", "Bob"], names
+    assert_equal %w[Alice Bob], names
   end
 
   def test_and_filter
@@ -343,7 +374,7 @@ class TestFilteringComposite < Minitest::Test
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: and_filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Alice", "Dave"], names
+    assert_equal %w[Alice Dave], names
   end
 
   def test_nested_and_within_or
@@ -357,7 +388,7 @@ class TestFilteringComposite < Minitest::Test
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Bob", "Carol"], names
+    assert_equal %w[Bob Carol], names
   end
 
   def test_nested_or_within_and
@@ -371,7 +402,7 @@ class TestFilteringComposite < Minitest::Test
     result = @table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Bob", "Dave"], names
+    assert_equal %w[Bob Dave], names
   end
 end
 
@@ -386,11 +417,11 @@ class TestFilteringAggregates < Minitest::Test
       column(:post_count, count: :posts)
     end
 
-    filter = Prato::Query::Filter.new(:postCount, :gt, 2)
+    filter = Prato::Query::Filter.new(:post_count, :gt, 2)
     result = table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Alice", "Carol"], names
+    assert_equal %w[Alice Carol], names
   end
 
   def test_filter_on_aggregate_count_eq_zero
@@ -399,7 +430,7 @@ class TestFilteringAggregates < Minitest::Test
       column(:post_count, count: :posts)
     end
 
-    filter = Prato::Query::Filter.new(:postCount, :eq, 0)
+    filter = Prato::Query::Filter.new(:post_count, :eq, 0)
     result = table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }
@@ -409,10 +440,10 @@ class TestFilteringAggregates < Minitest::Test
   def test_filter_on_nested_aggregate
     table = Prato.table(User) do
       column(:name)
-      column(:total_comments, count: [:posts, :comments])
+      column(:total_comments, count: %i[posts comments])
     end
 
-    filter = Prato::Query::Filter.new(:totalComments, :gt, 5)
+    filter = Prato::Query::Filter.new(:total_comments, :gt, 5)
     result = table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filter))
 
     names = result[:entries].map { |e| e[:name] }.sort
@@ -429,11 +460,28 @@ class TestFilteringAggregates < Minitest::Test
 
     filters = [
       Prato::Query::Filter.new(:active, :eq, true),
-      Prato::Query::Filter.new(:postCount, :gte, 2)
+      Prato::Query::Filter.new(:post_count, :gte, 2)
     ]
     result = table.to_table(User.all, params: Prato::Query::Parameters.new(filters: filters))
 
     names = result[:entries].map { |e| e[:name] }.sort
-    assert_equal ["Alice", "Bob"], names
+    assert_equal %w[Alice Bob], names
+  end
+end
+
+class TestFilteringAssociationAliases < Minitest::Test
+  def test_self_referential_association_selects_from_terminal_join_alias
+    table = Prato.table(Comment) do
+      column(post_category: [:post, :category, :name])
+      column(post_parent_category: [:post, :category, :parent_category, :name])
+      column(parent_category_id:   [:post, :category, :parent_category, :id])
+      configure(on_invalid_input: :raise)
+    end
+    result = table.to_table(
+      Comment.all,
+      params: nil # Prato::Query::Parameters.new(fields: [:post_category, :post_parent_category])
+    )
+    assert_equal 9, result[:entries].count { |e| e[:postParentCategory] == "Technology" }
+    assert_equal 14, result[:entries].count { |e| e[:postParentCategory].nil? }
   end
 end
