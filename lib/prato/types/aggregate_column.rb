@@ -16,28 +16,33 @@ module Prato
         aggregate_field = @aggregate_function == :count ? nil : @accessor[-1]
 
         reflections = resolve_reflections(base_model, association_path)
-        target_table = reflections.last.klass.arel_table
         base_table = base_model.arel_table
+        aliased_tables = reflections.each_with_index.map do |reflection, index|
+          Arel::Table.new(reflection.klass.table_name, as: "prato_agg_#{index}_#{reflection.klass.table_name}")
+        end
+        target_table = aliased_tables.last
 
         subquery = target_table.project(aggregate_expression(target_table, @aggregate_function, aggregate_field))
 
-        models = [base_model] + reflections.map(&:klass)
-
         (reflections.length - 1).downto(1) do |i|
           ref = reflections[i]
-          source_table = models[i].arel_table
+          source_table = aliased_tables[i - 1]
           subquery = subquery.join(source_table).on(
-            association_condition(ref, source_table, ref.klass.arel_table)
+            association_condition(ref, source_table, aliased_tables[i])
           )
         end
 
         first_ref = reflections.first
         subquery = subquery.where(
-          association_condition(first_ref, base_table, first_ref.klass.arel_table)
+          association_condition(first_ref, base_table, aliased_tables.first)
         )
 
         @arel_node = Arel::Nodes::Grouping.new(subquery)
         @sql_alias = display_id.to_s
+      end
+
+      def sql_node_for(_scope)
+        @arel_node
       end
 
       def select_node

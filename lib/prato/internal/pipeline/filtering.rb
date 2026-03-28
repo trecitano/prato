@@ -44,35 +44,35 @@ module Prato
           when Query::Filter
             column = spec.columns[filter.field]
             scope = ensure_joins(query_state.dataset, column, filter.operator)
-            condition = build_operator_condition(column.arel_node, filter.operator, filter.value)
+            condition = build_operator_condition(column, column.sql_node_for(scope), filter.operator, filter.value)
             query_state.with_dataset(scope.where(condition))
           when Query::AndFilter
             filter.filters.reduce(query_state) { |qs, child| apply_sql_filter(qs, spec, child) }
           when Query::OrFilter
-            scope = ensure_joins_for_filters(query_state.dataset, spec, filter.filters)
-            condition = build_sql_condition(spec, filter)
+            scope = ensure_left_joins_for_filters(query_state.dataset, spec, filter.filters)
+            condition = build_sql_condition(scope, spec, filter)
             query_state.with_dataset(scope.where(condition))
           end
         end
 
-        def build_sql_condition(spec, filter)
+        def build_sql_condition(scope, spec, filter)
           case filter
           when Query::Filter
             column = spec.columns[filter.field]
-            build_operator_condition(column.arel_node, filter.operator, filter.value)
+            build_operator_condition(column, column.sql_node_for(scope), filter.operator, filter.value)
           when Query::AndFilter
-            filter.filters.map { |child| build_sql_condition(spec, child) }
-                  .reduce { |a, b| a.and(b) }
+            filter.filters.map { |child| build_sql_condition(scope, spec, child) }
+                          .reduce { |a, b| a.and(b) }
           when Query::OrFilter
-            filter.filters.map { |child| build_sql_condition(spec, child) }
-                  .reduce { |a, b| a.or(b) }
+            filter.filters.map { |child| build_sql_condition(scope, spec, child) }
+                          .reduce { |a, b| a.or(b) }
           end
         end
 
-        def build_operator_condition(arel_node, operator, value)
+        def build_operator_condition(column, arel_node, operator, value)
           case operator
           when :eq          then arel_node.eq(value)
-          when :not_eq      then arel_node.not_eq(value)
+          when :not_eq      then negative_comparison_condition(column, arel_node.not_eq(value), arel_node)
           when :lt          then arel_node.lt(value)
           when :lte         then arel_node.lteq(value)
           when :gt          then arel_node.gt(value)
@@ -80,48 +80,38 @@ module Prato
           when :present     then arel_node.not_eq(nil)
           when :not_present then arel_node.eq(nil)
           when :in          then arel_node.in(Array(value))
-          when :not_in      then arel_node.not_in(Array(value))
+          when :not_in      then negative_comparison_condition(column, arel_node.not_in(Array(value)), arel_node)
           when :contains
             sanitized = ActiveRecord::Base.sanitize_sql_like(value.to_s)
             arel_node.matches("%#{sanitized}%")
           when :not_contains
             sanitized = ActiveRecord::Base.sanitize_sql_like(value.to_s)
-            arel_node.does_not_match("%#{sanitized}%")
+            negative_comparison_condition(column, arel_node.does_not_match("%#{sanitized}%"), arel_node)
           when :between                 then arel_node.gteq(value[0]).and(arel_node.lteq(value[1]))
           when :not_between             then arel_node.lt(value[0]).or(arel_node.gt(value[1]))
           when :between_exclusive       then arel_node.gt(value[0]).and(arel_node.lt(value[1]))
           when :not_between_exclusive   then arel_node.lteq(value[0]).or(arel_node.gteq(value[1]))
+          else
+            raise ArgumentError, "Unknown filter operator: #{operator.inspect}"
           end
         end
 
         def ensure_joins(scope, column, operator)
-          return scope unless column.is_a?(Types::Column) && column.association_path
-
-          join_hash = build_join_hash(column.association_path)
-          
-          if operator == :not_present
-            scope.left_joins(join_hash)
-          else
-            scope.joins(join_hash)
-          end
+          left_outer = operator == :not_present || null_inclusive_negative_operator?(column, operator)
+          Internal::SqlSupport.ensure_join(scope, column, left_outer: left_outer)
         end
 
-        def ensure_joins_for_filters(scope, spec, filters)
+        def ensure_left_joins_for_filters(scope, spec, filters)
           filters.each do |filter|
             case filter
             when Query::Filter
               column = spec.columns[filter.field]
-              scope = ensure_joins(scope, column, filter.operator)
+              scope = Internal::SqlSupport.ensure_join(scope, column, left_outer: true)
             when Query::AndFilter, Query::OrFilter
-              scope = ensure_joins_for_filters(scope, spec, filter.filters)
+              scope = ensure_left_joins_for_filters(scope, spec, filter.filters)
             end
           end
           scope
-        end
-
-        def build_join_hash(path)
-          return path.first if path.length == 1
-          path.reverse.reduce { |inner, outer| { outer => inner } }
         end
 
         ###################################################################
@@ -131,7 +121,8 @@ module Prato
         def apply_ruby_filters(query_state, spec, detailed_filters)
           return query_state if detailed_filters.empty?
 
-          records, ruby_data = query_state.materialized_dataset(spec, spec.visible_fields)
+          materialization_fields = (spec.visible_fields + filter_fields(detailed_filters.map(&:filter))).uniq
+          records, ruby_data = query_state.materialized_dataset(spec, materialization_fields)
 
           filtered = records.select do |record|
             detailed_filters.all? { |df| evaluate_ruby_filter(record, ruby_data, spec, df.filter) }
@@ -147,9 +138,9 @@ module Prato
             actual = column.extract_value(record, ruby_data)
             compare_value(actual, filter.operator, filter.value)
           when Query::AndFilter
-            filter.filters.all? { |child| evaluate_ruby_filter(record, spec, child, ruby_data) }
+            filter.filters.all? { |child| evaluate_ruby_filter(record, ruby_data, spec, child) }
           when Query::OrFilter
-            filter.filters.any? { |child| evaluate_ruby_filter(record, spec, child, ruby_data) }
+            filter.filters.any? { |child| evaluate_ruby_filter(record, ruby_data, spec, child) }
           end
         end
 
@@ -171,7 +162,32 @@ module Prato
           when :not_between   then !actual.nil? && (actual < expected[0] || actual > expected[1])
           when :between_exclusive     then !actual.nil? && actual > expected[0] && actual < expected[1]
           when :not_between_exclusive then !actual.nil? && (actual <= expected[0] || actual >= expected[1])
+          else
+            raise ArgumentError, "Unknown filter operator: #{operator.inspect}"
           end
+        end
+
+        def filter_fields(filters)
+          filters.flat_map do |filter|
+            case filter
+            when Query::Filter
+              [filter.field]
+            when Query::AndFilter, Query::OrFilter
+              filter_fields(filter.filters)
+            else
+              []
+            end
+          end
+        end
+
+        def negative_comparison_condition(column, base_condition, arel_node)
+          return base_condition unless column.is_a?(Types::AssociationColumn)
+
+          base_condition.or(arel_node.eq(nil))
+        end
+
+        def null_inclusive_negative_operator?(column, operator)
+          column.is_a?(Types::AssociationColumn) && %i[not_eq not_in not_contains].include?(operator)
         end
       end
 

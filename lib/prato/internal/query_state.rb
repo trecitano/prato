@@ -3,17 +3,16 @@
 module Prato
   module Internal
     class QueryState
-      attr_reader :dataset, :ruby_loaders
+      attr_reader :dataset
 
       def self.create(base_scope)
         dataset = base_scope.dup
-        ruby_loaders = {}
 
-        new(dataset, ruby_loaders)
+        new(dataset, nil)
       end
 
       def with_dataset(dataset)
-        self.class.new(dataset, ruby_loaders)
+        self.class.new(dataset, @ruby_loaded_data)
       end
 
       def unmaterialized?
@@ -34,10 +33,8 @@ module Prato
           case column
           when Types::AggregateColumn, Types::ExpressionColumn
             selects << column.select_node
-          when Types::Column
-            if column.association_path
-              association_paths << column.association_path
-            end
+          when Types::AssociationColumn
+            association_paths << column.association_path
           end
         end
 
@@ -78,9 +75,9 @@ module Prato
         result
       end
 
-      def initialize(dataset, ruby_loaders)
+      def initialize(dataset, ruby_loaded_data)
         @dataset = dataset
-        @ruby_loaders = ruby_loaders
+        @ruby_loaded_data = ruby_loaded_data
       end
     end
   end

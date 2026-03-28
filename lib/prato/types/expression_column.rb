@@ -21,6 +21,10 @@ module Prato
         @arel_node = Arel::Nodes::Grouping.new(Arel.sql(expression_sql))
       end
 
+      def sql_node_for(_scope)
+        @arel_node
+      end
+
       def select_node
         @arel_node.as(@sql_alias)
       end

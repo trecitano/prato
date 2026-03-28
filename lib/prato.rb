@@ -12,12 +12,14 @@ require_relative "prato/query/default_parser"
 
 require_relative "prato/configuration"
 
-require_relative "prato/types/column"
+require_relative "prato/types/association_column"
+require_relative "prato/types/direct_column"
 require_relative "prato/types/expression_column"
 require_relative "prato/types/aggregate_column"
 require_relative "prato/types/ruby_column"
 
 require_relative "prato/internal/lazy_loader_cache"
+require_relative "prato/internal/sql_support"
 require_relative "prato/internal/query_state"
 require_relative "prato/internal/specification"
 require_relative "prato/internal/specification_builder"

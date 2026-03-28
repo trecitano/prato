@@ -3,8 +3,7 @@
 module Prato
   module Internal
     class SpecificationBuilder
-
-      attr_reader :draft_columns
+      attr_reader :draft_columns, :ruby_loaders
 
       def initialize
         @config = Prato::Configuration.config
@@ -57,6 +56,10 @@ module Prato
 
           @draft_columns << draft
         end
+        return if section.spec.ruby_loaders.nil?
+
+        @ruby_loaders ||= {}
+        @ruby_loaders.merge!(section.spec.ruby_loaders)
       end
 
       def inner_ruby_loader(id, &block)
@@ -76,16 +79,22 @@ module Prato
         output_paths = {}
 
         @draft_columns.each do |draft|
-          column_output_path = draft.output_paths.map { |path| transform_key_part(path, @config.key_transformation).to_sym}
+          column_output_path = draft.output_paths.map do |path|
+            transform_key_part(path, @config.key_transformation).to_sym
+          end
           internal_column_name = Query::FieldPath.join(draft.output_paths)
 
           if columns.key?(internal_column_name)
-            raise ArgumentError, "Column '#{draft.name}' (internal id: #{internal_column_name}) has already been defined."
+            raise ArgumentError,
+                  "Column '#{draft.name}' (internal id: #{internal_column_name}) has already been defined."
           end
 
           column = draft.column
 
-          if column.is_a?(Types::Column) || column.is_a?(Types::ExpressionColumn) || column.is_a?(Types::AggregateColumn)
+          if column.is_a?(Types::DirectColumn) ||
+             column.is_a?(Types::AssociationColumn) ||
+             column.is_a?(Types::ExpressionColumn) ||
+             column.is_a?(Types::AggregateColumn)
             column.resolve_arel!(base_model, internal_column_name)
           end
 
@@ -163,8 +172,11 @@ module Prato
         elsif options[:expression]
           column = ::Prato::Types::ExpressionColumn.new(options[:expression], format: options[:format])
           DraftColumn.new(override_name, accessor, column, only: only, query_only: query_only)
+        elsif accessor.is_a?(Array) && accessor.length > 1
+          column = ::Prato::Types::AssociationColumn.new(accessor, format: options[:format])
+          DraftColumn.new(override_name, accessor, column, only: only, query_only: query_only)
         else
-          column = ::Prato::Types::Column.new(accessor, format: options[:format])
+          column = ::Prato::Types::DirectColumn.new(accessor, format: options[:format])
           DraftColumn.new(override_name, accessor, column, only: only, query_only: query_only)
         end
       end
@@ -293,8 +305,8 @@ module Prato
         self
       end
 
-      def ruby_column(*args, **kwargs)
-        @spec.inner_ruby_column(*args, **kwargs)
+      def ruby_column(*args, **kwargs, &block)
+        @spec.inner_ruby_column(*args, **kwargs, &block)
         self
       end
 

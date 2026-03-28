@@ -27,8 +27,9 @@ module Prato
 
           sorts.each do |sort|
             column = spec.columns[sort.field]
-            scope = ensure_left_joins(scope, column)
-            order = sort.order == :desc ? column.arel_node.desc : column.arel_node.asc
+            scope = Internal::SqlSupport.ensure_join(scope, column, left_outer: true)
+            node = column.sql_node_for(scope)
+            order = sort.order == :desc ? node.desc : node.asc
             scope = scope.order(order)
           end
 
@@ -36,7 +37,8 @@ module Prato
         end
 
         def apply_ruby_sorts(query_state, spec, sorts)
-          records, ruby_data = query_state.materialized_dataset(spec, spec.visible_fields)
+          materialization_fields = (spec.visible_fields + sorts.map(&:field)).uniq
+          records, ruby_data = query_state.materialized_dataset(spec, materialization_fields)
 
           sorted = records.sort do |a, b|
             sorts.reduce(0) do |cmp, sort|
@@ -47,7 +49,7 @@ module Prato
               val_b = column.extract_value(b, ruby_data)
 
               result = safe_compare(val_a, val_b)
-              sort.direction == :desc ? -result : result
+              sort.order == :desc ? -result : result
             end
           end
 
@@ -58,17 +60,8 @@ module Prato
           return 0 if a.nil? && b.nil?
           return 1 if a.nil?
           return -1 if b.nil?
+
           a <=> b
-        end
-
-        def ensure_left_joins(scope, column)
-          return scope unless column.is_a?(Types::Column) && column.association_path
-          scope.left_joins(build_join_hash(column.association_path))
-        end
-
-        def build_join_hash(path)
-          return path.first if path.length == 1
-          path.reverse.reduce { |inner, outer| { outer => inner } }
         end
       end
     end

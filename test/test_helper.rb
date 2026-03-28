@@ -8,7 +8,12 @@ require "minitest/autorun"
 require "active_record"
 
 ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ":memory:")
-ActiveRecord::Base.logger = nil
+ActiveRecord::Base.logger = Logger.new($stdout)
+ActiveRecord::QueryLogs.taggings = { source_location: true }
+ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+  caller_line = caller.find { |l| l.include?("prato") && !l.include?("vendor") }
+  puts "  ↳ #{caller_line}" if caller_line
+end
 
 ActiveRecord::Schema.define do
   create_table :companies do |t|
