@@ -9,9 +9,7 @@ module Prato
         def filter_query(query_state, spec, raw_filters)
           return query_state if raw_filters.nil?
 
-          filters = Array(raw_filters)
-          detailed = filters.map { |f| resolve_filter_type(spec, f) }
-          sql_filters, ruby_filters = detailed.partition { |df| df.type == :sql }
+          sql_filters, ruby_filters = classify_filters(spec, Array(raw_filters))
 
           filtered_query_1 = apply_sql_filters(query_state, spec, sql_filters)
           filtered_query_2 = apply_ruby_filters(filtered_query_1, spec, ruby_filters)
@@ -21,25 +19,36 @@ module Prato
 
         private
 
-        def resolve_filter_type(spec, filter)
-          case filter
-          when Query::Filter
-            column = spec.columns[filter.field]
-            type = column.is_a?(Types::RubyColumn) ? :ruby : :sql
-            DetailedFilter.new(type, filter)
-          when Query::AndFilter, Query::OrFilter
-            all_sql = filter.filters.all? { |f| resolve_filter_type(spec, f).type == :sql }
-            DetailedFilter.new(all_sql ? :sql : :ruby, filter)
+        def classify_filters(spec, filters)
+          flatten_ands(filters).partition { |f| all_sql?(spec, f) }
+        end
+
+        def flatten_ands(filters)
+          filters.flat_map do |f|
+            case f
+            when Query::AndFilter then flatten_ands(f.filters)
+            else [f]
+            end
           end
         end
 
-        def apply_sql_filters(query_state, spec, detailed_filters)
-          detailed_filters.reduce(query_state) do |qs, detailed|
-            normalized = normalize_sql_filter_tree(spec, detailed.filter)
+        def all_sql?(spec, filter)
+          case filter
+          when Query::Filter
+            !spec.columns[filter.field].is_a?(Types::RubyColumn)
+          when Query::AndFilter, Query::OrFilter
+            filter.filters.all? { |f| all_sql?(spec, f) }
+          end
+        end
+
+        def apply_sql_filters(query_state, spec, filters)
+          filters.reduce(query_state) do |qs, filter|
+            normalized = normalize_sql_filter_tree(spec, filter)
             apply_sql_filter(qs, spec, normalized)
           end
         end
 
+        # We normalize some SQL filters so that the SQL statements are simpler
         def normalize_sql_filter_tree(spec, filter)
           case filter
           when Query::Filter
@@ -162,14 +171,14 @@ module Prato
         # RUBY FILTERS
         ###################################################################
 
-        def apply_ruby_filters(query_state, spec, detailed_filters)
-          return query_state if detailed_filters.empty?
+        def apply_ruby_filters(query_state, spec, filters)
+          return query_state if filters.empty?
 
-          materialization_fields = (spec.visible_fields + filter_fields(detailed_filters.map(&:filter))).uniq
+          materialization_fields = (spec.visible_fields + filter_fields(filters)).uniq
           records, ruby_data = query_state.materialized_dataset(spec, materialization_fields)
 
           filtered = records.select do |record|
-            detailed_filters.all? { |df| evaluate_ruby_filter(record, ruby_data, spec, df.filter) }
+            filters.all? { |f| evaluate_ruby_filter(record, ruby_data, spec, f) }
           end
 
           query_state.with_dataset(filtered)
@@ -222,16 +231,6 @@ module Prato
               []
             end
           end
-        end
-
-      end
-
-      class DetailedFilter
-        attr_reader :type, :filter
-
-        def initialize(type, filter)
-          @type = type
-          @filter = filter
         end
       end
     end
