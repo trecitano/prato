@@ -5,6 +5,10 @@ require "test_helper"
 module FilteringComplexAssertions
   private
 
+  def comment_bodies(result)
+    result[:entries].map { |entry| entry[:body] }.sort
+  end
+
   def assert_comment_bodies(result, expected_bodies)
     assert_equal expected_bodies.sort, result[:entries].map { |entry| entry[:body] }.sort
     assert_equal expected_bodies.length, result[:entries].length
@@ -26,39 +30,39 @@ module FilteringComplexHelpers
       ruby_column(:parent_category_name_ruby, key: :id)
 
       ruby_loader(:body_map) do |records, _cache|
-        records.index_by(&:id).transform_values(&:body)
+        index_records_by_id(records, &:body)
       end
 
       ruby_loader(:category_map) do |records, _cache|
-        records.index_by(&:id).transform_values(&:post).transform_values(&:category)
+        index_records_by_id(records) { |comment| comment.post.category }
       end
 
       ruby_loader(:commenter_company_map) do |records, _cache|
-        records.index_by(&:id).transform_values { |comment| comment.user.company&.name }
+        index_records_by_id(records) { |comment| comment.user.company&.name }
       end
 
       ruby_loader(:post_author_company_map) do |records, _cache|
-        records.index_by(&:id).transform_values { |comment| comment.post.user.company&.name }
+        index_records_by_id(records) { |comment| comment.post.user.company&.name }
       end
 
       ruby_loader(:parent_category_map) do |_records, cache|
-        cache[:category_map].transform_values { |category| category&.parent_category&.name }
+        transform_hash_values(cache[:category_map]) { |category| category&.parent_category&.name }
       end
 
       ruby_loader(:category_name_map) do |_records, cache|
-        cache[:category_map].transform_values { |category| category&.name }
+        transform_hash_values(cache[:category_map]) { |category| category&.name }
       end
 
       ruby_loader(:body_length_map) do |_records, cache|
-        cache[:body_map].transform_values(&:length)
+        transform_hash_values(cache[:body_map], &:length)
       end
 
       ruby_loader(:body_upcase_map) do |_records, cache|
-        cache[:body_map].transform_values(&:upcase)
+        transform_hash_values(cache[:body_map], &:upcase)
       end
 
       ruby_loader(:body_starts_with_g_map) do |_records, cache|
-        cache[:body_map].transform_values { |body| body.start_with?("G") ? body : nil }
+        transform_hash_values(cache[:body_map]) { |body| body.start_with?("G") ? body : nil }
       end
 
       ruby_loader(:body_length) do |_records, cache|
@@ -111,27 +115,27 @@ module FilteringComplexHelpers
       ruby_column(:post_author_company, key: :id)
 
       ruby_loader(:body_map) do |records, _cache|
-        records.index_by(&:id).transform_values(&:body)
+        index_records_by_id(records, &:body)
       end
 
       ruby_loader(:body_length) do |_records, cache|
-        cache[:body_map].transform_values(&:length)
+        transform_hash_values(cache[:body_map], &:length)
       end
 
       ruby_loader(:body_upcase) do |_records, cache|
-        cache[:body_map].transform_values(&:upcase)
+        transform_hash_values(cache[:body_map], &:upcase)
       end
 
       ruby_loader(:body_starts_with_g) do |_records, cache|
-        cache[:body_map].transform_values { |body| body.start_with?("G") ? body : nil }
+        transform_hash_values(cache[:body_map]) { |body| body.start_with?("G") ? body : nil }
       end
 
       ruby_loader(:commenter_company) do |records, _cache|
-        records.index_by(&:id).transform_values { |comment| comment.user.company&.name }
+        index_records_by_id(records) { |comment| comment.user.company&.name }
       end
 
       ruby_loader(:post_author_company) do |records, _cache|
-        records.index_by(&:id).transform_values { |comment| comment.post.user.company&.name }
+        index_records_by_id(records) { |comment| comment.post.user.company&.name }
       end
 
       configure(on_invalid_input: :raise)
@@ -180,27 +184,27 @@ module FilteringComplexHelpers
       end
 
       ruby_loader(:body_map) do |records, _cache|
-        records.index_by(&:id).transform_values(&:body)
+        index_records_by_id(records, &:body)
       end
 
       ruby_loader(:body_length) do |_records, cache|
-        cache[:body_map].transform_values(&:length)
+        transform_hash_values(cache[:body_map], &:length)
       end
 
       ruby_loader(:body_upcase) do |_records, cache|
-        cache[:body_map].transform_values(&:upcase)
+        transform_hash_values(cache[:body_map], &:upcase)
       end
 
       ruby_loader(:body_starts_with_g) do |_records, cache|
-        cache[:body_map].transform_values { |body| body.start_with?("G") ? body : nil }
+        transform_hash_values(cache[:body_map]) { |body| body.start_with?("G") ? body : nil }
       end
 
       ruby_loader(:commenter_company) do |records, _cache|
-        records.index_by(&:id).transform_values { |comment| comment.user.company&.name }
+        index_records_by_id(records) { |comment| comment.user.company&.name }
       end
 
       ruby_loader(:post_author_company) do |records, _cache|
-        records.index_by(&:id).transform_values { |comment| comment.post.user.company&.name }
+        index_records_by_id(records) { |comment| comment.post.user.company&.name }
       end
 
       configure(on_invalid_input: :raise)
@@ -362,6 +366,22 @@ class TestFilteringEdgeCases < Minitest::Test
       )
     end
   end
+
+  def test_negative_optional_association_operators_with_nil_values_match_ruby_mirror_columns
+    ruby_table = build_comment_ruby_table
+
+    {
+      not_eq: nil,
+      not_in: [nil],
+      not_contains: nil
+    }.each do |operator, value|
+      sql_result = result_for(@table, filter(:post_parent_category, operator, value))
+      ruby_result = result_for(ruby_table, filter(:parent_category_name_ruby, operator, value))
+
+      assert_equal comment_bodies(ruby_result), comment_bodies(sql_result),
+                   "expected #{operator.inspect} with #{value.inspect} to match ruby mirror semantics"
+    end
+  end
 end
 
 class TestFilteringComplexCases < Minitest::Test
@@ -494,6 +514,30 @@ class TestFilteringSqlAndOperator < Minitest::Test
 
     assert_comment_bodies(result_for(@table, filters), ["Agreed", "Keep going!"])
   end
+
+  def test_and_filter_with_not_eq_nil_on_optional_association
+    filters = Prato::Query::AndFilter.new([
+                                            filter(:post_parent_category, :not_eq, nil),
+                                            filter(:author_name, :eq, "Bob")
+                                          ])
+
+    assert_comment_bodies(
+      result_for(@table, filters),
+      ["Great post!", "Love gems", "Puma is great"]
+    )
+  end
+
+  def test_and_filter_with_eq_nil_on_optional_association
+    filters = Prato::Query::AndFilter.new([
+                                            filter(:post_parent_category, :eq, nil),
+                                            filter(:author_name, :eq, "Alice")
+                                          ])
+
+    assert_comment_bodies(
+      result_for(@table, filters),
+      ["Good advice", "Interesting take", "Welcome!", "What about bonds?", "You got this"]
+    )
+  end
 end
 
 class TestFilteringSqlOrOperator < Minitest::Test
@@ -607,6 +651,28 @@ class TestFilteringSqlOrOperator < Minitest::Test
 
       assert_comment_bodies(result_for(@table, filters), comments_without_parent_category_bodies)
     end
+  end
+
+  def test_or_filter_with_not_eq_nil_on_optional_association_matches_present_semantics
+    filters = Prato::Query::OrFilter.new([
+                                           filter(:post_parent_category, :not_eq, nil),
+                                           filter(:post_title, :eq, "No such title")
+                                         ])
+
+    assert_comment_bodies(
+      result_for(@table, filters),
+      ["Good luck", "Great post!", "Love gems", "Me too", "Puma is great",
+       "Rails is fun", "Really helpful", "Thanks for sharing", "Which ones?"]
+    )
+  end
+
+  def test_or_filter_with_eq_nil_on_optional_association_matches_not_present_semantics
+    filters = Prato::Query::OrFilter.new([
+                                           filter(:post_parent_category, :eq, nil),
+                                           filter(:post_title, :eq, "No such title")
+                                         ])
+
+    assert_comment_bodies(result_for(@table, filters), comments_without_parent_category_bodies)
   end
 end
 
@@ -829,6 +895,56 @@ class TestFilteringAll < Minitest::Test
     assert_comment_bodies(
       result_for(@table, filters),
       ["Good advice", "Good luck", "Good tip!", "Rails is fun"]
+    )
+  end
+
+  def test_mixed_and_filter_preserves_contains_semantics_for_sql_columns
+    pure_sql_result = result_for(@table, filter(:post_parent_category, :contains, "tech"))
+    mixed_result = result_for(
+      @table,
+      Prato::Query::AndFilter.new([
+                                    filter(:post_parent_category, :contains, "tech"),
+                                    filter(:body_length, :gte, 0)
+                                  ])
+    )
+
+    assert_equal comment_bodies(pure_sql_result), comment_bodies(mixed_result)
+  end
+
+  def test_mixed_and_filter_preserves_negative_nil_semantics_for_sql_columns
+    pure_sql_result = result_for(@table, filter(:post_parent_category, :not_eq, nil))
+    mixed_result = result_for(
+      @table,
+      Prato::Query::AndFilter.new([
+                                    filter(:post_parent_category, :not_eq, nil),
+                                    filter(:body_length, :gte, 0)
+                                  ])
+    )
+
+    assert_equal comment_bodies(pure_sql_result), comment_bodies(mixed_result)
+  end
+
+  def test_mixed_and_filter_with_not_eq_nil_combined_with_ruby_column
+    filters = Prato::Query::AndFilter.new([
+                                            filter(:post_parent_category, :not_eq, nil),
+                                            filter(:body_length, :gte, 12)
+                                          ])
+
+    assert_comment_bodies(
+      result_for(@table, filters),
+      ["Puma is great", "Rails is fun", "Really helpful", "Thanks for sharing"]
+    )
+  end
+
+  def test_mixed_or_filter_with_eq_nil_combined_with_ruby_column
+    filters = Prato::Query::OrFilter.new([
+                                           filter(:post_parent_category, :eq, nil),
+                                           filter(:body_starts_with_g, :present, nil)
+                                         ])
+
+    assert_comment_bodies(
+      result_for(@table, filters),
+      comments_without_parent_category_bodies + ["Good luck", "Great post!"]
     )
   end
 end

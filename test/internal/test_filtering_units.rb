@@ -255,20 +255,52 @@ class TestFilteringRubyColumns < Minitest::Test
 
       ruby_loader(:post_count) do |records, _cache|
         counts = Post.group(:user_id).count
-        records.index_by(&:id).transform_values { |user| counts.fetch(user.id, 0) }
+        index_records_by_id(records) { |user| counts.fetch(user.id, 0) }
       end
 
       ruby_loader(:name_upcase) do |records, _cache|
-        records.index_by(&:id).transform_values { |user| user.name.upcase }
+        index_records_by_id(records) { |user| user.name.upcase }
       end
 
       ruby_loader(:company_name) do |records, _cache|
-        records.index_by(&:id).transform_values { |user| user.company&.name }
+        index_records_by_id(records) { |user| user.company&.name }
       end
     end
   end
 
   define_filter_operator_tests FilteringUnitsTestCases::RUBY_CASES
+end
+
+class TestFilteringMembershipEdgeCases < Minitest::Test
+  include FilteringUnitsTestHelper
+
+  def setup
+    @table = Prato.table(User) do
+      column(:name)
+      ruby_column(:name_upcase, key: :id)
+
+      ruby_loader(:name_upcase) do |records, _cache|
+        index_records_by_id(records) { |user| user.name.upcase }
+      end
+    end
+  end
+
+  def test_sql_in_with_empty_array_returns_no_rows
+    assert_filter_names(@table, field: :name, operator: :in, value: [], expected_names: [])
+  end
+
+  def test_sql_not_in_with_empty_array_returns_all_rows
+    assert_filter_names(@table, field: :name, operator: :not_in, value: [], expected_names: %w[Alice Bob Carol Dave])
+  end
+
+  def test_ruby_in_with_empty_array_returns_no_rows
+    assert_filter_names(@table, field: :name_upcase, operator: :in, value: [], expected_names: [])
+  end
+
+  def test_ruby_not_in_with_empty_array_returns_all_rows
+    assert_filter_names(@table, field: :name_upcase, operator: :not_in, value: [],
+                                expected_names: %w[Alice Bob Carol Dave])
+  end
 end
 
 class TestFilteringSqlNormalColumnsSection < Minitest::Test
@@ -334,13 +366,13 @@ class TestFilteringRubyColumnsSection < Minitest::Test
       section(:computed) do
         ruby_column(:post_count, key: :id) do |records, _cache|
           counts = Post.group(:user_id).count
-          records.index_by(&:id).transform_values { |user| counts.fetch(user.id, 0) }
+          index_records_by_id(records) { |user| counts.fetch(user.id, 0) }
         end
         ruby_column(:name_upcase, key: :id) do |records, _cache|
-          records.index_by(&:id).transform_values { |user| user.name.upcase }
+          index_records_by_id(records) { |user| user.name.upcase }
         end
         ruby_column(:company_name, key: :id) do |records, _cache|
-          records.index_by(&:id).transform_values { |user| user.company&.name }
+          index_records_by_id(records) { |user| user.company&.name }
         end
       end
     end

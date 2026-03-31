@@ -1,12 +1,18 @@
 # frozen_string_literal: true
 
 require "bundler/gem_tasks"
-require "minitest/test_task"
+require "rake/testtask"
 
-Minitest::TestTask.create
+Rake::TestTask.new(:test) do |test_task|
+  test_task.libs << "test"
+  test_task.pattern = "test/**/test_*.rb"
+end
 
-require "rubocop/rake_task"
+begin
+  require "rubocop/rake_task"
 
-RuboCop::RakeTask.new
-
-task default: %i[test rubocop]
+  RuboCop::RakeTask.new
+  task default: %i[test rubocop]
+rescue LoadError
+  task default: :test
+end

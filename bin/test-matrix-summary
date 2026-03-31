@@ -1,0 +1,99 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+
+MINITEST_SUMMARY_RE = /(\d+) runs, (\d+) assertions, (\d+) failures, (\d+) errors, (\d+) skips/
+METADATA_RE = {
+  ruby: /\ARuby: (.+)/,
+  ar: /\AActive Record: (.+)/,
+  db: /\ADatabase provider: (.+)/
+}.freeze
+
+def parse_log(path)
+  ruby = nil
+  ar = nil
+  db = nil
+  stats = nil
+  status = nil
+
+  File.foreach(path) do |line|
+    METADATA_RE.each do |key, re|
+      match = re.match(line)
+      next unless match
+
+      case key
+      when :ruby then ruby = match[1]
+      when :ar then ar = match[1]
+      when :db then db = match[1]
+      end
+    end
+
+    match = MINITEST_SUMMARY_RE.match(line)
+    if match
+      stats = { runs: match[1].to_i, assertions: match[2].to_i, failures: match[3].to_i, errors: match[4].to_i, skips: match[5].to_i }
+      status = (stats[:failures] + stats[:errors]).zero? ? "PASS" : "FAIL"
+    end
+  end
+
+  status ||= "FAIL"
+
+  {
+    ruby: ruby || "?",
+    ar: ar || "?",
+    db: db || "?",
+    status: status,
+    runs: stats&.fetch(:runs),
+    assertions: stats&.fetch(:assertions),
+    failures: stats&.fetch(:failures),
+    errors: stats&.fetch(:errors),
+    skips: stats&.fetch(:skips)
+  }
+end
+
+logs_dir = ARGV[0]
+unless logs_dir && File.directory?(logs_dir)
+  warn "Usage: #{$PROGRAM_NAME} <logs-directory>"
+  exit 1
+end
+
+log_files = Dir.glob(File.join(logs_dir, "*.log")).sort
+if log_files.empty?
+  warn "No log files found in #{logs_dir}"
+  exit 1
+end
+
+summaries = log_files.map { |path| parse_log(path) }
+
+headers = { ruby: "Ruby", ar: "AR", db: "DB", status: "Status", runs: "Runs", assertions: "Assert", failures: "Fail", errors: "Err", skips: "Skip" }
+widths = headers.each_with_object({}) do |(key, label), w|
+  values = summaries.map { |s| s[key].to_s }
+  w[key] = ([label] + values).map { |v| v.length }.max
+end
+
+header_line = headers.map { |key, label| label.ljust(widths[key]) }.join("  ")
+separator = widths.values.map { |w| "-" * w }.join("  ")
+
+puts header_line
+puts separator
+summaries.each do |s|
+  line = headers.keys.map do |key|
+    value = s[key].nil? ? "-" : s[key].to_s
+    key == :status ? value.ljust(widths[key]) : value.rjust(widths[key])
+  end
+  puts line.join("  ")
+end
+
+total_runs = summaries.sum { |s| s[:runs] || 0 }
+total_assertions = summaries.sum { |s| s[:assertions] || 0 }
+total_failures = summaries.sum { |s| s[:failures] || 0 }
+total_errors = summaries.sum { |s| s[:errors] || 0 }
+total_skips = summaries.sum { |s| s[:skips] || 0 }
+
+puts separator
+totals = { ruby: "Total", ar: "", db: "", status: "", runs: total_runs, assertions: total_assertions, failures: total_failures, errors: total_errors, skips: total_skips }
+total_line = headers.keys.map do |key|
+  value = totals[key].to_s
+  key == :ruby ? value.ljust(widths[key]) : value.rjust(widths[key])
+end
+puts total_line.join("  ")

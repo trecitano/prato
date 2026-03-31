@@ -1,0 +1,416 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "etc"
+require "fileutils"
+require "json"
+require "open3"
+require "shellwords"
+require "tmpdir"
+require "thread"
+
+ROOT = File.expand_path("..", __dir__)
+MATRIX_HELPER = File.join(ROOT, "bin", "test-matrix")
+IN_CONTAINER_TASK = "/workspace/bin/run-appraisal-task"
+IMAGE_PREFIX = ENV.fetch("PRATO_MATRIX_IMAGE_PREFIX", "prato-ruby")
+COMPOSE_SERVICES = {
+  "pg" => "prato-test-postgres",
+  "mysql2" => "prato-test-mysql"
+}.freeze
+
+DOCKER_BUNDLE_ROOT = ENV.fetch("PRATO_MATRIX_BUNDLE_ROOT", File.join(ROOT, "tmp", "docker-bundle"))
+
+def abort_with(message)
+  warn message
+  exit 1
+end
+
+def env_filter(name)
+  value = ENV[name].to_s.strip
+  return nil if value.empty?
+
+  value.split
+end
+
+def selected?(value, filter)
+  filter.nil? || filter.include?(value)
+end
+
+def capture_command!(*command)
+  stdout, stderr, status = Open3.capture3(*command, chdir: ROOT)
+  return stdout if status.success?
+
+  $stderr.write(stdout) unless stdout.empty?
+  $stderr.write(stderr) unless stderr.empty?
+  abort_with("command failed: #{Shellwords.join(command)}")
+end
+
+def system_or_abort(label, command)
+  puts label
+  success = system(*command, chdir: ROOT)
+  abort_with("command failed: #{Shellwords.join(command)}") unless success
+end
+
+def rows_from_matrix
+  JSON.parse(capture_command!(MATRIX_HELPER, "--format=json"))
+end
+
+def image_family_for(ruby_version)
+  Gem::Version.new(ruby_version) < Gem::Version.new("3.1.0") ? "legacy" : "modern"
+end
+
+def image_tag_for(ruby_version)
+  "#{IMAGE_PREFIX}-#{image_family_for(ruby_version)}:#{ruby_version}"
+end
+
+def dockerfile_for(ruby_version)
+  File.join(ROOT, "Dockerfile.#{image_family_for(ruby_version)}")
+end
+
+def image_present?(image_tag)
+  _stdout, _stderr, status = Open3.capture3("docker", "image", "inspect", image_tag, chdir: ROOT)
+  status.success?
+end
+
+def ensure_ruby_images!(rows)
+  rows.map { |row| row.fetch("ruby") }.uniq.sort_by { |ruby| Gem::Version.new(ruby) }.each do |ruby_version|
+    image_tag = image_tag_for(ruby_version)
+    next if image_present?(image_tag)
+
+    system_or_abort("Building #{image_tag}", [
+      "docker", "build",
+      "-f", dockerfile_for(ruby_version),
+      "--build-arg", "RUBY_VERSION=#{ruby_version}",
+      "-t", image_tag,
+      "."
+    ])
+  end
+end
+
+def required_compose_services(rows)
+  rows.map { |row| row.fetch("db") }
+      .uniq
+      .filter_map { |db| COMPOSE_SERVICES[db] }
+end
+
+def compose_container_id(service)
+  capture_command!("docker", "compose", "ps", "-q", service).strip
+end
+
+def compose_container_state(container_id)
+  state_json = capture_command!("docker", "inspect", container_id, "--format", "{{json .State}}")
+  JSON.parse(state_json)
+end
+
+def wait_for_service!(service, timeout_seconds: 90)
+  deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout_seconds
+
+  loop do
+    container_id = compose_container_id(service)
+    unless container_id.empty?
+      state = compose_container_state(container_id)
+      running = state.fetch("Running", false)
+      health = state["Health"]
+      return if running && (health.nil? || health.fetch("Status") == "healthy")
+    end
+
+    break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+    sleep 1
+  end
+
+  abort_with("Timed out waiting for Docker Compose service #{service} to become ready")
+end
+
+def ensure_compose_services!(rows)
+  services = required_compose_services(rows)
+  return if services.empty?
+
+  system_or_abort("Starting database services", ["docker", "compose", "up", "-d", *services])
+  services.each { |service| wait_for_service!(service) }
+end
+
+def docker_env_for(row)
+  {
+    "TEST_DB" => row.fetch("db"),
+    "PGHOST" => ENV.fetch("PGHOST", "prato-test-postgres"),
+    "PGPORT" => ENV.fetch("PGPORT", "5432"),
+    "PGDATABASE" => ENV.fetch("PGDATABASE", "prato_test"),
+    "PGUSER" => ENV.fetch("PGUSER", "prato"),
+    "PGPASSWORD" => ENV.fetch("PGPASSWORD", "prato"),
+    "MYSQL_HOST" => ENV.fetch("MYSQL_HOST", "prato-test-mysql"),
+    "MYSQL_PORT" => ENV.fetch("MYSQL_PORT", "3306"),
+    "MYSQL_DATABASE" => ENV.fetch("MYSQL_DATABASE", "prato_test"),
+    "MYSQL_USER" => ENV.fetch("MYSQL_USER", "prato"),
+    "MYSQL_PASSWORD" => ENV.fetch("MYSQL_PASSWORD", "prato")
+  }.tap do |env|
+    env["VERBOSE_SQL"] = ENV["VERBOSE_SQL"] if ENV.key?("VERBOSE_SQL")
+    env["SQLITE_DATABASE"] = ENV["SQLITE_DATABASE"] if ENV.key?("SQLITE_DATABASE")
+  end
+end
+
+def sanitize_path_component(value)
+  value.gsub(File::SEPARATOR, "_")
+end
+
+def bundle_cache_dir_for(row)
+  File.join(DOCKER_BUNDLE_ROOT, sanitize_path_component(row.fetch("ruby")))
+end
+
+def docker_command_for(row, action)
+  bundle_cache_dir = bundle_cache_dir_for(row)
+  FileUtils.mkdir_p(bundle_cache_dir)
+
+  command = [
+    "docker", "run", "--rm",
+    "--user", "#{Process.uid}:#{Process.gid}",
+    "--network", "prato-test",
+    "-e", "HOME=/tmp",
+    "-v", "#{ROOT}:/workspace",
+    "-v", "#{bundle_cache_dir}:/usr/local/bundle",
+    "-w", "/workspace"
+  ]
+
+  docker_env_for(row).each do |name, value|
+    command.concat(["-e", "#{name}=#{value}"])
+  end
+
+  command.concat([
+    image_tag_for(row.fetch("ruby")),
+    IN_CONTAINER_TASK,
+    action,
+    row.fetch("appraisal")
+  ])
+end
+
+def ensure_bundles!(rows)
+  threads = rows.group_by { |row| row.fetch("ruby") }.map do |ruby_version, ruby_rows|
+    Thread.new do
+      gemfiles = ruby_rows.map { |row| row.fetch("appraisal") }.uniq.map { |a|
+        "/workspace/gemfiles/#{a.tr('-', '_')}.gemfile"
+      }
+
+      bundle_cache_dir = bundle_cache_dir_for(ruby_rows.first)
+      FileUtils.mkdir_p(bundle_cache_dir)
+
+      check_script = gemfiles.map { |gf| "BUNDLE_GEMFILE=#{gf} bundle check" }.join(" && ")
+      install_script = gemfiles.map { |gf| "BUNDLE_GEMFILE=#{gf} bundle install" }.join(" && ")
+
+      puts "Checking gem install for #{ruby_version}"
+
+      docker_base = [
+        "docker", "run", "--rm",
+        "--user", "#{Process.uid}:#{Process.gid}",
+        "-e", "HOME=/tmp",
+        "-v", "#{ROOT}:/workspace",
+        "-v", "#{bundle_cache_dir}:/usr/local/bundle",
+        "-w", "/workspace",
+        image_tag_for(ruby_version),
+        "sh", "-c"
+      ]
+
+      _stdout, _stderr, status = Open3.capture3(*docker_base, check_script, chdir: ROOT)
+      if status.success?
+        puts "No gems to install for Ruby #{ruby_version}."
+        next
+      end
+
+      system_or_abort("Installing bundles for Ruby #{ruby_version}", docker_base + [install_script])
+    end
+  end
+
+  threads.each(&:join)
+end
+
+def prepare_shared_databases!(rows)
+  rows.reject { |row| row.fetch("db") == "sqlite3" }
+      .group_by { |row| row.fetch("db") }
+      .each_value do |db_rows|
+        row = db_rows.max_by { |r| Gem::Version.new(r.fetch("ruby")) }
+        system_or_abort("Preparing #{row.fetch('db')} test database", docker_command_for(row, "prepare"))
+      end
+end
+
+def cleanup_shared_databases!(rows)
+  rows.reject { |row| row.fetch("db") == "sqlite3" }
+      .group_by { |row| row.fetch("db") }
+      .each_value do |db_rows|
+        row = db_rows.max_by { |r| Gem::Version.new(r.fetch("ruby")) }
+        system_or_abort("Cleaning #{row.fetch('db')} test database", docker_command_for(row, "cleanup"))
+      end
+end
+
+def row_log_name(index, row)
+  format("%03d-%s-%s.log", index + 1, row.fetch("ruby"), row.fetch("appraisal")).tr(File::SEPARATOR, "_")
+end
+
+def active_record_version_for(row)
+  appraisal = row.fetch("appraisal")
+  match = appraisal.match(/\Aar-(\d+)-(\d+)-/)
+  return "unknown" unless match
+
+  "#{match[1]}.#{match[2]}"
+end
+
+def log_metadata_for(row)
+  [
+    "Ruby: #{row.fetch('ruby')}",
+    "Image: #{image_tag_for(row.fetch('ruby'))}",
+    "Active Record: #{active_record_version_for(row)}",
+    "Database provider: #{row.fetch('db')}",
+    "Appraisal: #{row.fetch('appraisal')}"
+  ]
+end
+
+def format_duration(seconds)
+  if seconds >= 60
+    minutes = (seconds / 60).floor
+    secs = (seconds % 60).round(1)
+    "#{minutes}m #{secs}s"
+  else
+    "#{seconds.round(2)}s"
+  end
+end
+
+def time_step(name, timings)
+  puts
+  puts "=== #{name} ==="
+  started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  result = yield
+  elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
+  timings << { name: name, elapsed: elapsed }
+  puts "--- #{name} completed in #{format_duration(elapsed)} ---"
+  result
+end
+
+def load_matrix
+  capture_command!("docker", "version")
+  capture_command!("docker", "compose", "version")
+
+  matrix_rows = rows_from_matrix
+
+  ruby_filter = env_filter("RUBIES")
+  appraisal_filter = env_filter("APPRAISALS")
+  db_filter = env_filter("DBS")
+
+  selected_rows = matrix_rows.select do |row|
+    selected?(row.fetch("ruby"), ruby_filter) &&
+      selected?(row.fetch("appraisal"), appraisal_filter) &&
+      selected?(row.fetch("db"), db_filter)
+  end
+
+  abort_with("No matrix entries matched the selected filters.") if selected_rows.empty?
+  selected_rows
+end
+
+def run_tests!(selected_rows, logs_dir)
+  queue = Queue.new
+  selected_rows.each_with_index { |row, index| queue << [index, row] }
+  results = Array.new(selected_rows.length)
+
+  worker_count = [Etc.nprocessors, selected_rows.length].min
+  puts "Running tests with #{worker_count} workers"
+  threads = Array.new(worker_count) do
+    Thread.new do
+      begin
+        loop do
+          index, row = queue.pop(true)
+          log_path = File.join(logs_dir, row_log_name(index, row))
+
+          begin
+            label = "ruby #{row.fetch('ruby')} #{row.fetch('appraisal')} (#{row.fetch('db')})"
+            puts "Starting: #{label}"
+            started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            command = docker_command_for(row, "test")
+
+            status = nil
+            File.open(log_path, "w") do |log|
+              log.sync = true
+              log_metadata_for(row).each { |line| log.puts line }
+              log.puts
+              log.puts "$ #{Shellwords.join(command)}"
+              log.puts
+              pid = Process.spawn(*command, chdir: ROOT, out: log, err: log)
+              _pid, status = Process.wait2(pid)
+              results[index] = { row: row, log_path: log_path, status: status }
+            end
+            elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
+            status_tag = status&.success? ? "PASS" : "FAIL"
+            puts "Finished [#{status_tag}]: #{label} (#{elapsed.round(1)}s)"
+          rescue ThreadError
+            break
+          rescue StandardError => error
+            File.open(log_path, "a") do |log|
+              log.puts error.full_message
+            end
+            results[index] = { row: row, log_path: log_path, status: nil, error: error }
+          end
+        end
+      rescue ThreadError
+        nil
+      end
+    end
+  end
+
+  threads.each(&:join)
+  results
+end
+
+def print_results(selected_rows, results, logs_dir)
+  selected_rows.each_with_index do |row, index|
+    result = results.fetch(index)
+    status_label = result[:status]&.success? ? "PASS" : "FAIL"
+    puts "==> [#{status_label}] ruby #{row.fetch('ruby')} #{row.fetch('appraisal')} (#{row.fetch('db')})"
+  end
+
+  failures = results.count { |result| !result[:status]&.success? }
+  puts
+
+  system(File.join(ROOT, "bin", "test-matrix-summary"), logs_dir)
+  puts "Completed #{selected_rows.length} matrix entries with #{failures} failure#{'s' unless failures == 1}."
+  puts "Logs: #{logs_dir}"
+
+  failures
+end
+
+def print_timing_summary(timings)
+  puts
+  puts "=== Timing Summary ==="
+  total = 0.0
+  timings.each do |entry|
+    total += entry[:elapsed]
+    puts "  %-30s %s" % [entry[:name], format_duration(entry[:elapsed])]
+  end
+  puts "  %-30s %s" % ["Total", format_duration(total)]
+end
+
+def main
+  timings = []
+
+  selected_rows = time_step("Load matrix", timings) { load_matrix }
+
+  cleanup_shared_dbs = ENV["CLEANUP_SHARED_DBS"] == "1"
+
+  FileUtils.mkdir_p(File.join(ROOT, "tmp"))
+  FileUtils.mkdir_p(DOCKER_BUNDLE_ROOT)
+
+  time_step("Build Docker images", timings) { ensure_ruby_images!(selected_rows) }
+  time_step("Install bundles", timings) { ensure_bundles!(selected_rows) }
+  time_step("Start database services", timings) { ensure_compose_services!(selected_rows) }
+  time_step("Prepare databases", timings) { prepare_shared_databases!(selected_rows) }
+
+  logs_dir = Dir.mktmpdir("test-matrix-", File.join(ROOT, "tmp"))
+
+  results = time_step("Run tests", timings) { run_tests!(selected_rows, logs_dir) }
+  failures = time_step("Summarize results", timings) { print_results(selected_rows, results, logs_dir) }
+
+  if cleanup_shared_dbs
+    time_step("Cleanup databases", timings) { cleanup_shared_databases!(selected_rows) }
+  end
+
+  print_timing_summary(timings)
+
+  exit(failures.zero? ? 0 : 1)
+end
+
+main

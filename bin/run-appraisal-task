@@ -1,0 +1,66 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+ACTIONS = %w[test prepare cleanup].freeze
+
+def abort_with(message)
+  warn message
+  exit 1
+end
+
+action = ARGV[0].to_s
+appraisal = ARGV[1].to_s
+
+unless ACTIONS.include?(action) && !appraisal.empty?
+  abort_with("usage: #{File.basename($PROGRAM_NAME)} <test|prepare|cleanup> <appraisal>\n\n  example: #{File.basename($PROGRAM_NAME)} test ar-7-2-sqlite3")
+end
+
+project_root = File.expand_path("..", __dir__)
+Dir.chdir(project_root)
+
+gemfile = File.join(project_root, "gemfiles", "#{appraisal.tr('-', '_')}.gemfile")
+lockfile = "#{gemfile}.lock"
+
+abort_with("Missing #{gemfile}. Generate appraisal gemfiles first.") unless File.exist?(gemfile)
+abort_with("Missing #{lockfile}. Regenerate appraisal lockfiles first.") unless File.exist?(lockfile)
+
+test_db = ENV.fetch("TEST_DB") do
+  case appraisal
+  when /[-_]sqlite3?$/ then "sqlite3"
+  when /[-_]p(?:g|ostgres)$/ then "pg"
+  when /[-_]mysql2?$/ then "mysql2"
+  else abort_with("Unable to infer TEST_DB from appraisal #{appraisal}")
+  end
+end
+
+test_db_mode = case action
+               when "prepare", "cleanup" then action
+               when "test"
+                 ENV.fetch("PRATO_TEST_DB_MODE") do
+                   case test_db
+                   when "sqlite3" then "ephemeral"
+                   when "pg", "mysql2" then "prepared"
+                   else abort_with("Unable to infer PRATO_TEST_DB_MODE from TEST_DB=#{test_db}")
+                   end
+                 end
+               end
+
+lockfile_lines = File.readlines(lockfile).map(&:chomp)
+bundled_at = lockfile_lines.index("BUNDLED WITH")
+abort_with("Missing BUNDLED WITH in #{lockfile}") unless bundled_at
+bundler_version = lockfile_lines.drop(bundled_at + 1).find { |l| !l.strip.empty? }&.strip
+abort_with("Missing bundler version in #{lockfile}") unless bundler_version
+bundle_cmd = ["ruby", "-S", "bundle", "_#{bundler_version}_"]
+
+env = {
+  "TEST_DB" => test_db,
+  "PRATO_TEST_DB_MODE" => test_db_mode,
+  "BUNDLE_GEMFILE" => gemfile
+}
+
+run_cmd = case action
+          when "test" then ["ruby", "-Ilib", "-Itest", "-e", "Dir.glob('test/**/test_*.rb').each { |f| require File.expand_path(f) }"]
+          else [File.join(project_root, "bin", "test-db"), action]
+          end
+
+exec(env, *bundle_cmd, "exec", *run_cmd)

@@ -9,7 +9,7 @@ module Prato
         def serialize_query(query_state, spec, raw_fields)
           fields = raw_fields || spec.visible_fields
 
-          if query_state.unmaterialized? && spec.sql_only?(fields)
+          if query_state.unmaterialized? && spec.sql_only?(fields) && optimized_serialization_supported?(query_state.dataset)
             optimized_serialization(query_state, spec, fields)
           else
             normal_serialization(query_state, spec, fields)
@@ -17,6 +17,10 @@ module Prato
         end
 
         private
+
+        def optimized_serialization_supported?(scope)
+          scope.respond_to?(:build_join_buckets, true)
+        end
 
         def optimized_serialization(query_state, spec, fields)
           columns = spec.columns

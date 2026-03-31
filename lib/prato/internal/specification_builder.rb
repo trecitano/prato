@@ -165,6 +165,7 @@ module Prato
         name_map, options = extract_name_and_options(args, kwargs, RESERVED_COLUMN_SYMBOLS)
         aggregate_function, aggregate_accessor = extract_aggregate(options)
         override_name, accessor = parse_name_map(name_map)
+        accessor = parse_accessor(accessor)
 
         if aggregate_function
           column = ::Prato::Types::AggregateColumn.new(aggregate_function, aggregate_accessor, format: options[:format])
@@ -205,7 +206,9 @@ module Prato
         when Symbol
           [nil, name_map]
         when Array
-          if name_map.size == 2
+          if name_map.size == 1 && name_map.first.is_a?(Hash)
+            parse_name_map(name_map.first)
+          elsif name_map.size == 2
             [name_map.first, name_map.second]
           else
             [nil, name_map.first]

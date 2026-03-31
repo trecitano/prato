@@ -1,0 +1,77 @@
+[
+  { "ruby": "2.4.10", "appraisal": "ar-5-0-sqlite3", "db": "sqlite3" },
+  { "ruby": "2.4.10", "appraisal": "ar-5-0-pg", "db": "pg" },
+  { "ruby": "2.4.10", "appraisal": "ar-5-0-mysql2", "db": "mysql2" },
+
+  { "ruby": "2.5.9", "appraisal": "ar-5-1-sqlite3", "db": "sqlite3" },
+  { "ruby": "2.5.9", "appraisal": "ar-5-1-pg", "db": "pg" },
+  { "ruby": "2.5.9", "appraisal": "ar-5-1-mysql2", "db": "mysql2" },
+
+  { "ruby": "2.6.10", "appraisal": "ar-5-2-sqlite3", "db": "sqlite3" },
+  { "ruby": "2.6.10", "appraisal": "ar-5-2-pg", "db": "pg" },
+  { "ruby": "2.6.10", "appraisal": "ar-5-2-mysql2", "db": "mysql2" },
+
+  { "ruby": "2.7.8", "appraisal": "ar-6-0-sqlite3", "db": "sqlite3" },
+  { "ruby": "2.7.8", "appraisal": "ar-6-0-pg", "db": "pg" },
+  { "ruby": "2.7.8", "appraisal": "ar-6-0-mysql2", "db": "mysql2" },
+
+  { "ruby": "2.7.8", "appraisal": "ar-6-1-sqlite3", "db": "sqlite3" },
+  { "ruby": "2.7.8", "appraisal": "ar-6-1-pg", "db": "pg" },
+  { "ruby": "2.7.8", "appraisal": "ar-6-1-mysql2", "db": "mysql2" },
+
+  { "ruby": "3.0.7", "appraisal": "ar-7-0-sqlite3", "db": "sqlite3" },
+  { "ruby": "3.0.7", "appraisal": "ar-7-0-pg", "db": "pg" },
+  { "ruby": "3.0.7", "appraisal": "ar-7-0-mysql2", "db": "mysql2" },
+
+  { "ruby": "3.1.7", "appraisal": "ar-7-1-sqlite3", "db": "sqlite3" },
+  { "ruby": "3.1.7", "appraisal": "ar-7-1-pg", "db": "pg" },
+  { "ruby": "3.1.7", "appraisal": "ar-7-1-mysql2", "db": "mysql2" },
+
+  { "ruby": "3.2.11", "appraisal": "ar-7-2-sqlite3", "db": "sqlite3" },
+  { "ruby": "3.2.11", "appraisal": "ar-7-2-pg", "db": "pg" },
+  { "ruby": "3.2.11", "appraisal": "ar-7-2-mysql2", "db": "mysql2" },
+
+  { "ruby": "3.3.11", "appraisal": "ar-7-2-sqlite3", "db": "sqlite3" },
+  { "ruby": "3.3.11", "appraisal": "ar-7-2-pg", "db": "pg" },
+  { "ruby": "3.3.11", "appraisal": "ar-7-2-mysql2", "db": "mysql2" },
+
+  { "ruby": "3.4.9", "appraisal": "ar-7-2-sqlite3", "db": "sqlite3" },
+  { "ruby": "3.4.9", "appraisal": "ar-7-2-pg", "db": "pg" },
+  { "ruby": "3.4.9", "appraisal": "ar-7-2-mysql2", "db": "mysql2" },
+
+  { "ruby": "4.0.2", "appraisal": "ar-7-2-sqlite3", "db": "sqlite3" },
+  { "ruby": "4.0.2", "appraisal": "ar-7-2-pg", "db": "pg" },
+  { "ruby": "4.0.2", "appraisal": "ar-7-2-mysql2", "db": "mysql2" },
+
+  { "ruby": "3.2.11", "appraisal": "ar-8-0-sqlite3", "db": "sqlite3" },
+  { "ruby": "3.2.11", "appraisal": "ar-8-0-pg", "db": "pg" },
+  { "ruby": "3.2.11", "appraisal": "ar-8-0-mysql2", "db": "mysql2" },
+
+  { "ruby": "3.3.11", "appraisal": "ar-8-0-sqlite3", "db": "sqlite3" },
+  { "ruby": "3.3.11", "appraisal": "ar-8-0-pg", "db": "pg" },
+  { "ruby": "3.3.11", "appraisal": "ar-8-0-mysql2", "db": "mysql2" },
+
+  { "ruby": "3.4.9", "appraisal": "ar-8-0-sqlite3", "db": "sqlite3" },
+  { "ruby": "3.4.9", "appraisal": "ar-8-0-pg", "db": "pg" },
+  { "ruby": "3.4.9", "appraisal": "ar-8-0-mysql2", "db": "mysql2" },
+
+  { "ruby": "4.0.2", "appraisal": "ar-8-0-sqlite3", "db": "sqlite3" },
+  { "ruby": "4.0.2", "appraisal": "ar-8-0-pg", "db": "pg" },
+  { "ruby": "4.0.2", "appraisal": "ar-8-0-mysql2", "db": "mysql2" },
+
+  { "ruby": "3.2.11", "appraisal": "ar-8-1-sqlite3", "db": "sqlite3" },
+  { "ruby": "3.2.11", "appraisal": "ar-8-1-pg", "db": "pg" },
+  { "ruby": "3.2.11", "appraisal": "ar-8-1-mysql2", "db": "mysql2" },
+
+  { "ruby": "3.3.11", "appraisal": "ar-8-1-sqlite3", "db": "sqlite3" },
+  { "ruby": "3.3.11", "appraisal": "ar-8-1-pg", "db": "pg" },
+  { "ruby": "3.3.11", "appraisal": "ar-8-1-mysql2", "db": "mysql2" },
+
+  { "ruby": "3.4.9", "appraisal": "ar-8-1-sqlite3", "db": "sqlite3" },
+  { "ruby": "3.4.9", "appraisal": "ar-8-1-pg", "db": "pg" },
+  { "ruby": "3.4.9", "appraisal": "ar-8-1-mysql2", "db": "mysql2" },
+
+  { "ruby": "4.0.2", "appraisal": "ar-8-1-sqlite3", "db": "sqlite3" },
+  { "ruby": "4.0.2", "appraisal": "ar-8-1-pg", "db": "pg" },
+  { "ruby": "4.0.2", "appraisal": "ar-8-1-mysql2", "db": "mysql2" }
+]

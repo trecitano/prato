@@ -3,11 +3,9 @@
 module Prato
   module Types
     class RubyColumn
-
       def initialize(loader, key:)
         @loader = loader
         @key = key || :id
-
       end
 
       def extract_value(record, ruby_data)

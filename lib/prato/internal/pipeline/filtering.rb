@@ -35,8 +35,53 @@ module Prato
 
         def apply_sql_filters(query_state, spec, detailed_filters)
           detailed_filters.reduce(query_state) do |qs, detailed|
-            apply_sql_filter(qs, spec, detailed.filter)
+            normalized = normalize_sql_filter_tree(spec, detailed.filter)
+            apply_sql_filter(qs, spec, normalized)
           end
+        end
+
+        def normalize_sql_filter_tree(spec, filter)
+          case filter
+          when Query::Filter
+            normalize_sql_leaf_filter(spec, filter)
+          when Query::AndFilter
+            Query::AndFilter.new(filter.filters.map { |f| normalize_sql_filter_tree(spec, f) })
+          when Query::OrFilter
+            Query::OrFilter.new(filter.filters.map { |f| normalize_sql_filter_tree(spec, f) })
+          end
+        end
+
+        NIL_ARRAY = [nil].freeze
+        NEGATIVE_ASSC_OPS = %i[not_eq not_in not_contains].freeze
+        def normalize_sql_leaf_filter(spec, filter)
+          operator = filter.operator
+          value = filter.value
+
+          # Rule 1: nil values → presence operators
+          if operator == :eq && value.nil?
+            return Query::Filter.new(filter.field, :not_present, nil)
+          end
+          if operator == :not_eq && value.nil?
+            return Query::Filter.new(filter.field, :present, nil)
+          end
+
+          if operator == :in && value == [nil]
+            return Query::Filter.new(filter.field, :not_present, nil)
+          end
+
+          if operator == :not_in && value == [nil]
+            return Query::Filter.new(filter.field, :present, nil)
+          end
+
+          # Rule 2: negative operators on association columns (non-nil values) → OrFilter with not_present
+          if NEGATIVE_ASSC_OPS.include?(operator) && !value.nil? && spec.columns[filter.field].is_a?(Types::AssociationColumn)
+            return Query::OrFilter.new([
+              filter,
+              Query::Filter.new(filter.field, :not_present, nil)
+            ])
+          end
+
+          filter
         end
 
         def apply_sql_filter(query_state, spec, filter)
@@ -44,7 +89,7 @@ module Prato
           when Query::Filter
             column = spec.columns[filter.field]
             scope = ensure_joins(query_state.dataset, column, filter.operator)
-            condition = build_operator_condition(column, column.sql_node_for(scope), filter.operator, filter.value)
+            condition = build_operator_condition(column.sql_node_for(scope), filter.operator, filter.value)
             query_state.with_dataset(scope.where(condition))
           when Query::AndFilter
             filter.filters.reduce(query_state) { |qs, child| apply_sql_filter(qs, spec, child) }
@@ -59,7 +104,7 @@ module Prato
           case filter
           when Query::Filter
             column = spec.columns[filter.field]
-            build_operator_condition(column, column.sql_node_for(scope), filter.operator, filter.value)
+            build_operator_condition(column.sql_node_for(scope), filter.operator, filter.value)
           when Query::AndFilter
             filter.filters.map { |child| build_sql_condition(scope, spec, child) }
                           .reduce { |a, b| a.and(b) }
@@ -69,10 +114,10 @@ module Prato
           end
         end
 
-        def build_operator_condition(column, arel_node, operator, value)
+        def build_operator_condition(arel_node, operator, value)
           case operator
           when :eq          then arel_node.eq(value)
-          when :not_eq      then negative_comparison_condition(column, arel_node.not_eq(value), arel_node)
+          when :not_eq      then arel_node.not_eq(value)
           when :lt          then arel_node.lt(value)
           when :lte         then arel_node.lteq(value)
           when :gt          then arel_node.gt(value)
@@ -80,13 +125,13 @@ module Prato
           when :present     then arel_node.not_eq(nil)
           when :not_present then arel_node.eq(nil)
           when :in          then arel_node.in(Array(value))
-          when :not_in      then negative_comparison_condition(column, arel_node.not_in(Array(value)), arel_node)
+          when :not_in      then arel_node.not_in(Array(value))
           when :contains
             sanitized = ActiveRecord::Base.sanitize_sql_like(value.to_s)
             arel_node.matches("%#{sanitized}%")
           when :not_contains
             sanitized = ActiveRecord::Base.sanitize_sql_like(value.to_s)
-            negative_comparison_condition(column, arel_node.does_not_match("%#{sanitized}%"), arel_node)
+            arel_node.does_not_match("%#{sanitized}%")
           when :between                 then arel_node.gteq(value[0]).and(arel_node.lteq(value[1]))
           when :not_between             then arel_node.lt(value[0]).or(arel_node.gt(value[1]))
           when :between_exclusive       then arel_node.gt(value[0]).and(arel_node.lt(value[1]))
@@ -97,8 +142,7 @@ module Prato
         end
 
         def ensure_joins(scope, column, operator)
-          left_outer = operator == :not_present || null_inclusive_negative_operator?(column, operator)
-          Internal::SqlSupport.ensure_join(scope, column, left_outer: left_outer)
+          Internal::SqlSupport.ensure_join(scope, column, left_outer: operator == :not_present)
         end
 
         def ensure_left_joins_for_filters(scope, spec, filters)
@@ -180,15 +224,6 @@ module Prato
           end
         end
 
-        def negative_comparison_condition(column, base_condition, arel_node)
-          return base_condition unless column.is_a?(Types::AssociationColumn)
-
-          base_condition.or(arel_node.eq(nil))
-        end
-
-        def null_inclusive_negative_operator?(column, operator)
-          column.is_a?(Types::AssociationColumn) && %i[not_eq not_in not_contains].include?(operator)
-        end
       end
 
       class DetailedFilter

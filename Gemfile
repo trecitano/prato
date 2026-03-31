@@ -4,13 +4,10 @@ source "https://rubygems.org"
 
 gemspec
 
-gem "irb"
-gem "rake", "~> 13.0"
-
-gem "minitest", "~> 6.0.2"
-
-gem "activerecord", "~> 8.1"
-gem 'simplecov', group: 'test'
+gem "appraisal", "~> 2.5"
 gem "sqlite3", "~> 2.9"
 
 gem "rubocop", "~> 1.21"
+gem "irb"
+gem "minitest", "~> 6.0.2"
+gem "simplecov"

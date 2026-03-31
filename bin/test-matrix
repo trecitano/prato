@@ -1,0 +1,67 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+
+ROOT = File.expand_path("..", __dir__)
+MATRIX_PATH = File.join(ROOT, "test_matrix.json")
+VALID_DBS = %w[sqlite3 pg mysql2].freeze
+VALID_FORMATS = %w[tsv json].freeze
+
+def abort_with(message)
+  warn message
+  exit 1
+end
+
+format = "tsv"
+
+ARGV.each do |argument|
+  case argument
+  when "--json"
+    format = "json"
+  when "--tsv"
+    format = "tsv"
+  when /\A--format=(.+)\z/
+    format = Regexp.last_match(1)
+  else
+    abort_with("usage: #{File.basename($PROGRAM_NAME)} [--format=json|tsv]")
+  end
+end
+
+abort_with("unsupported format: #{format}") unless VALID_FORMATS.include?(format)
+
+rows = JSON.parse(File.read(MATRIX_PATH))
+abort_with("#{MATRIX_PATH} must contain a JSON array") unless rows.is_a?(Array)
+
+normalized_rows = rows.map.with_index(1) do |row, index|
+  abort_with("matrix row #{index} must be an object") unless row.is_a?(Hash)
+
+  ruby_version = row["ruby"]
+  appraisal = row["appraisal"]
+  db = row["db"]
+
+  abort_with("matrix row #{index} is missing ruby") unless ruby_version.is_a?(String) && !ruby_version.empty?
+  abort_with("matrix row #{index} is missing appraisal") unless appraisal.is_a?(String) && !appraisal.empty?
+  abort_with("matrix row #{index} is missing db") unless db.is_a?(String) && !db.empty?
+  abort_with("matrix row #{index} has unsupported db #{db.inspect}") unless VALID_DBS.include?(db)
+
+  expected_suffix = "-#{db}"
+  unless appraisal.end_with?(expected_suffix)
+    abort_with("matrix row #{index} appraisal #{appraisal.inspect} must end with #{expected_suffix.inspect}")
+  end
+
+  {
+    "ruby" => ruby_version,
+    "appraisal" => appraisal,
+    "db" => db
+  }
+end
+
+case format
+when "json"
+  puts JSON.generate(normalized_rows)
+when "tsv"
+  normalized_rows.each do |row|
+    puts [row.fetch("ruby"), row.fetch("appraisal"), row.fetch("db")].join("\t")
+  end
+end

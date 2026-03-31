@@ -1,0 +1,53 @@
+FROM docker.io/library/debian:bullseye-slim
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    GEM_HOME=/usr/local/bundle \
+    PATH=/usr/local/ruby/bin:/usr/local/bundle/bin:/usr/local/bin:$PATH \
+    RUBY_CONFIGURE_OPTS=--disable-install-doc --with-openssl-dir=/usr \
+    RUBY_CFLAGS=-Wno-error=implicit-function-declaration
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      autoconf \
+      bison \
+      build-essential \
+      ca-certificates \
+      curl \
+      git \
+      libbz2-dev \
+      libdb-dev \
+      libffi-dev \
+      libgdbm-dev \
+      libgmp-dev \
+      libmariadb-dev \
+      libmariadb-dev-compat \
+      libncurses-dev \
+      libpq-dev \
+      libreadline-dev \
+      libsqlite3-dev \
+      libssl-dev \
+      libyaml-dev \
+      patch \
+      pkg-config \
+      xz-utils \
+      zlib1g-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 https://github.com/rbenv/ruby-build.git /tmp/ruby-build \
+ && /tmp/ruby-build/install.sh \
+ && rm -rf /tmp/ruby-build
+
+ENV BUNDLE_PATH=/usr/local/bundle \
+    BUNDLE_SILENCE_ROOT_WARNING=1 \
+    BUNDLE_JOBS=8 \
+    BUNDLE_RETRY=3
+
+ARG RUBY_VERSION
+
+RUN ruby-build "${RUBY_VERSION}" /usr/local/ruby && ruby --version
+RUN gem update --system 3.2.3
+
+WORKDIR /workspace
+
+CMD ["bash"]

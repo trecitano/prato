@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+command = ARGV.fetch(0) do
+  warn "usage: #{File.basename($PROGRAM_NAME)} <prepare|cleanup>"
+  exit 1
+end
+
+mode = case command
+       when "prepare" then "prepare"
+       when "cleanup" then "cleanup"
+       else
+         warn "usage: #{File.basename($PROGRAM_NAME)} <prepare|cleanup>"
+         exit 1
+       end
+
+ENV["PRATO_TEST_BOOT_ONLY"] = "1"
+ENV["PRATO_TEST_DB_MODE"] = mode
+
+require_relative "../test/test_helper"

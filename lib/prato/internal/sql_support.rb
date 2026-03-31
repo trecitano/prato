@@ -54,15 +54,49 @@ module Prato
       private
 
       def join_dependencies_for(scope)
-        buckets, join_type = scope.send(:build_join_buckets)
+        if scope.respond_to?(:build_join_buckets, true)
+          buckets, join_type = scope.send(:build_join_buckets)
 
-        join_dependency = scope.construct_join_dependency(buckets[:named_join], join_type)
-        alias_tracker = scope.alias_tracker(buckets[:leading_join] + buckets[:join_node])
+          join_dependency = scope.construct_join_dependency(buckets[:named_join], join_type)
+          alias_tracker = scope.alias_tracker(buckets[:leading_join] + buckets[:join_node])
 
-        stashed_join_dependencies = buckets[:stashed_join]
+          stashed_join_dependencies = buckets[:stashed_join]
 
-        join_dependency.join_constraints(stashed_join_dependencies, alias_tracker, scope.references_values)
-        [join_dependency, *stashed_join_dependencies]
+          join_dependency.join_constraints(stashed_join_dependencies, alias_tracker, scope.references_values)
+          [join_dependency, *stashed_join_dependencies]
+        else
+          alias_tracker = scope.alias_tracker
+          join_dependencies = []
+
+          joins_values = named_joins_for(scope.joins_values)
+          unless joins_values.empty?
+            join_dependency = ActiveRecord::Associations::JoinDependency.new(scope.model, scope.table, joins_values)
+            join_dependency.join_constraints([], Arel::Nodes::InnerJoin, alias_tracker)
+            join_dependencies << join_dependency
+          end
+
+          left_outer_joins_values = named_joins_for(scope.left_outer_joins_values)
+          unless left_outer_joins_values.empty?
+            join_dependency = ActiveRecord::Associations::JoinDependency.new(scope.model, scope.table,
+                                                                             left_outer_joins_values)
+            join_dependency.join_constraints([], Arel::Nodes::OuterJoin, alias_tracker)
+            join_dependencies << join_dependency
+          end
+
+          join_dependencies
+        end
+      end
+
+      def named_joins_for(join_values)
+        Array(join_values).flat_map do |join_value|
+          if join_value.is_a?(Array)
+            named_joins_for(join_value)
+          elsif join_value.is_a?(Hash) || join_value.is_a?(Symbol)
+            [join_value]
+          else
+            []
+          end
+        end
       end
 
       def find_node(root, association_path)
