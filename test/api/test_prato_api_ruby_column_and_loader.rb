@@ -393,22 +393,24 @@ class TestApiRubyColumn < Minitest::Test
 
   def test_single_argument_with_dependencies_with_block
     table = Prato.table(User) do
-      ruby_column(:company_stuff, key: :company_id) do |users, _|
+      ruby_column(:company_stuff, key: ->(r) { r.company&.id }) do |users, _|
         companies = users.map(&:company).compact.uniq(&:id)
-        companies.map { |c| [c.id, "I am company #{c.name}"]}
+        companies.map { |c| [c.id, "I am company #{c.name}"]}.to_h
       end
-      ruby_column(:number_companies, key: nil) do |users, ctx|
+      ruby_column(:number_companies, key: "No key") do |users, ctx|
         companies = ctx[:company_stuff]
-        { nil => companies.size }
+        { 'No key' => companies.size }
       end
     end
 
     result = table.to_table(User.all)
     assert_equal(
       [
-        { output: "tested" },
-        { output: "tested" }
-      ], result[:entries]
+        {companyStuff: "I am company Acme Corp", numberCompanies: 2 },
+        {companyStuff: "I am company Acme Corp", numberCompanies: 2 },
+        {companyStuff: "I am company Globex", numberCompanies: 2 },
+        {companyStuff: nil, numberCompanies: 2}],
+      result[:entries]
     )
   end
 
@@ -432,27 +434,6 @@ class TestApiRubyColumn < Minitest::Test
         { numberCompanies: 2 },
         { numberCompanies: 2 },
         { numberCompanies: 2 }
-      ], result[:entries]
-    )
-  end
-
-  def test_single_argument_inline_blocks_with_dependency_and_key
-    table = Prato.table(User) do
-      ruby_column(:company_stuff, key: %i[company id]) do |users, _|
-        companies = users.map(&:company).compact.uniq(&:id)
-        companies.map { |c| [c.id, "I am company #{c.name}"]}
-      end
-      ruby_column(:number_companies, key: :total) do
-        companies = ctx[:company_stuff]
-        { total: companies.size }
-      end
-    end
-
-    result = table.to_table(User.all)
-    assert_equal(
-      [
-        { output: "tested" },
-        { output: "tested" }
       ], result[:entries]
     )
   end

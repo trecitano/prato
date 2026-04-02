@@ -32,7 +32,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
     assert(result[:entries].all? { |entry| entry.keys == [:title] })
   end
 
-  def test_query_column_has_many_filters_do_not_duplicate_rows_or_total_count
+  def test_query_column_has_many_filters_duplicates_rows_or_total_count
     table = Prato.table(Post) do
       column(:title)
       query_column(tag_name: %i[tags name])
@@ -43,8 +43,32 @@ class TestApiQueryColumnFiltering < Minitest::Test
       params: params_with_filter(:tag_name, :in, %w[rails ruby], page: 1, per_page: 10)
     )
 
-    assert_equal ["Hello", "Young dev"], result[:entries].map { |entry| entry[:title] }.sort
-    assert_equal 2, result[:totalCount]
+    assert_equal ["Hello", "Hello", "Young dev"], result[:entries].map { |entry| entry[:title] }.sort
+    assert_equal 3, result[:totalCount]
+  end
+
+  # The library does not handle distincts
+  def test_query_column_has_many_or_filters_duplicates_rows_or_total_count
+    table = Prato.table(Post) do
+      column(:id)
+      column(:title)
+      column(tag_name: %i[tags name])
+    end
+
+    result = table.to_page(
+      Post.order(:id),
+      params: Prato::Query::Parameters.new(
+        page: 1,
+        per_page: 10,
+        filters: Prato::Query::OrFilter.new([
+          filter(:tag_name, :eq, "rails"),
+          filter(:tag_name, :eq, "ruby")
+        ])
+      )
+    )
+
+    assert_equal ["Hello", "Hello", "Young dev"], result[:entries].map { |entry| entry[:title] }.sort
+    assert_equal 3, result[:totalCount]
   end
 end
 

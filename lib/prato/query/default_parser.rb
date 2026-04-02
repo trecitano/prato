@@ -32,6 +32,8 @@ module Prato
         return nil if input.nil?
 
         case input
+        when String
+          parse_filters(parse_json_value(input, context: 'filters'))
         when Prato::Query::AndFilter
           input
         when Prato::Query::OrFilter, Prato::Query::Filter
@@ -76,8 +78,8 @@ module Prato
         when Symbol
           field
         when String
-          parts = field.split('.')
-          parts.length == 1 ? parts.first.to_sym : parts.map(&:to_sym)
+          parts = field.split('.').map(&:to_sym)
+          Prato::Query::FieldPath.join(parts)
         when Array
           symbols = field.map do |part|
             unless part.respond_to?(:to_sym)
@@ -88,7 +90,7 @@ module Prato
             part.to_sym
           end
 
-          symbols.length == 1 ? symbols.first : symbols
+          Prato::Query::FieldPath.join(symbols)
         else
           raise ArgumentError, "Invalid field value: #{field.inspect}"
         end

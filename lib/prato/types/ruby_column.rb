@@ -10,6 +10,8 @@ module Prato
 
       def extract_value(record, ruby_data)
         key_value = case @key
+                    when Proc
+                      @key.call(record)
                     when Array
                       @key.reduce(record) { |obj, method| obj.public_send(method) }
                     when Symbol
