@@ -1,0 +1,99 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Usage:
+#   bin/benchmark [ITERATIONS] [--per-file]
+#
+# Examples:
+#   bin/benchmark           # 5 runs of the full suite
+#   bin/benchmark 10        # 10 runs of the full suite
+#   bin/benchmark --per-file  # 5 runs + per-file breakdown
+
+require "open3"
+require "json"
+
+ITERATIONS = (ARGV.find { |a| a.match?(/\A\d+\z/) } || 5).to_i
+PER_FILE   = ARGV.include?("--per-file")
+TEST_DIR   = File.expand_path("../test", __dir__)
+TEST_FILES = Dir.glob("#{TEST_DIR}/**/test_*.rb").sort
+
+def time_command(cmd, env = {})
+  start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  stdout, stderr, status = Open3.capture3(env, *cmd)
+  elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+  { elapsed: elapsed, success: status.success?, stdout: stdout, stderr: stderr }
+end
+
+def stats(times)
+  sorted = times.sort
+  n      = sorted.size
+  sum    = sorted.sum
+  mean   = sum / n
+  median = n.odd? ? sorted[n / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0
+  variance = sorted.sum { |t| (t - mean)**2 } / n
+  stddev   = Math.sqrt(variance)
+
+  { min: sorted.first, max: sorted.last, mean: mean, median: median, stddev: stddev }
+end
+
+def format_seconds(s)
+  format("%.3fs", s)
+end
+
+def print_stats(label, times)
+  s = stats(times)
+  puts "  min: #{format_seconds(s[:min])}  max: #{format_seconds(s[:max])}  " \
+         "mean: #{format_seconds(s[:mean])}  median: #{format_seconds(s[:median])}  " \
+         "stddev: #{format_seconds(s[:stddev])}"
+end
+
+puts "Benchmarking test suite (#{ITERATIONS} iterations)"
+puts "Ruby: #{RUBY_VERSION}  DB: #{ENV.fetch("TEST_DB", "sqlite")}"
+puts "-" * 60
+
+# --- Full suite ---
+suite_times = []
+failures = 0
+
+ITERATIONS.times do |i|
+  print "  Run #{i + 1}/#{ITERATIONS}..."
+  result = time_command(["ruby", "-Itest", "-Ilib", "-e", TEST_FILES.map { |f| "require '#{f}'" }.join("; ")])
+
+  if result[:success]
+    suite_times << result[:elapsed]
+    puts " #{format_seconds(result[:elapsed])}"
+  else
+    failures += 1
+    puts " FAILED (#{format_seconds(result[:elapsed])})"
+    $stderr.puts result[:stderr] unless result[:stderr].empty?
+  end
+end
+
+puts
+puts "Full suite results (#{suite_times.size} successful / #{ITERATIONS} total):"
+if suite_times.any?
+  print_stats("Suite", suite_times)
+else
+  puts "  No successful runs."
+end
+
+# --- Per-file breakdown ---
+if PER_FILE
+  puts
+  puts "Per-file breakdown (1 run each):"
+  puts "-" * 60
+
+  file_times = TEST_FILES.map do |file|
+    relative = file.sub("#{TEST_DIR}/", "")
+    print "  #{relative}..."
+    result = time_command(["ruby", "-Itest", "-Ilib", file])
+    puts " #{format_seconds(result[:elapsed])}#{result[:success] ? "" : " FAILED"}"
+    { file: relative, elapsed: result[:elapsed], success: result[:success] }
+  end
+
+  puts
+  puts "Slowest files:"
+  file_times.sort_by { |r| -r[:elapsed] }.first(5).each do |r|
+    puts "  #{format_seconds(r[:elapsed])}  #{r[:file]}"
+  end
+end

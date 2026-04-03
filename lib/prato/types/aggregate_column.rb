@@ -3,12 +3,13 @@
 module Prato
   module Types
     class AggregateColumn
-      attr_reader :arel_node, :format
+      attr_reader :arel_node, :format, :filter
 
-      def initialize(aggregate_function, aggregate_accessor, format: nil)
+      def initialize(aggregate_function, aggregate_accessor, format: nil, filter: nil)
         @accessor = Array(aggregate_accessor)
         @aggregate_function = aggregate_function
         @format = format
+        @filter = filter
       end
 
       def resolve_arel!(base_model, display_id)

@@ -3,11 +3,12 @@
 module Prato
   module Types
     class DirectColumn
-      attr_reader :format
+      attr_reader :format, :filter
 
-      def initialize(accessor, format: nil)
+      def initialize(accessor, format: nil, filter: nil)
         @attribute_name = accessor.is_a?(Array) ? accessor.first : accessor
         @format = format
+        @filter = filter
       end
 
       def resolve_arel!(base_model, _display_id)

@@ -98,6 +98,12 @@ module Prato
           when Query::Filter
             column = spec.columns[filter.field]
             scope = ensure_joins(query_state.dataset, column, filter.operator)
+
+            if column.filter
+              result = column.filter.call(scope, filter.operator, filter.value)
+              return query_state.with_dataset(result) unless result.nil?
+            end
+
             condition = build_operator_condition(column.sql_node_for(scope), filter.operator, filter.value)
             query_state.with_dataset(scope.where(condition))
           when Query::AndFilter
@@ -113,6 +119,12 @@ module Prato
           case filter
           when Query::Filter
             column = spec.columns[filter.field]
+
+            if column.filter
+              result = column.filter.call(scope, filter.operator, filter.value)
+              return result.where_clause.ast unless result.nil?
+            end
+
             build_operator_condition(column.sql_node_for(scope), filter.operator, filter.value)
           when Query::AndFilter
             filter.filters.map { |child| build_sql_condition(scope, spec, child) }
@@ -189,6 +201,12 @@ module Prato
           when Query::Filter
             column = spec.columns[filter.field]
             actual = column.extract_value(record, ruby_data)
+
+            if column.filter
+              result = column.filter.call(actual, filter.operator, filter.value)
+              return result unless result.nil?
+            end
+
             compare_value(actual, filter.operator, filter.value)
           when Query::AndFilter
             filter.filters.all? { |child| evaluate_ruby_filter(record, ruby_data, spec, child) }

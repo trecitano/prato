@@ -3,12 +3,13 @@
 module Prato
   module Types
     class AssociationColumn
-      attr_reader :association_path, :format
+      attr_reader :association_path, :format, :filter
 
-      def initialize(accessor, format: nil)
+      def initialize(accessor, format: nil, filter: nil)
         @association_path = accessor[0..-2].map(&:to_sym).freeze
         @attribute_name = accessor[-1].to_sym
         @format = format
+        @filter = filter
       end
 
       def resolve_arel!(base_model, _display_id)

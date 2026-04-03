@@ -13,8 +13,8 @@ module Prato
 
       AGGREGATE_FUNCTIONS = %i[count sum avg min max].freeze
       COMMON_RESERVED_KEYWORDS = %i[only].freeze
-      RESERVED_COLUMN_SYMBOLS = (%i[format expression] + COMMON_RESERVED_KEYWORDS + AGGREGATE_FUNCTIONS).freeze
-      RESERVED_RUBY_COLUMN_SYMBOLS = ([:key] + COMMON_RESERVED_KEYWORDS).freeze
+      RESERVED_COLUMN_SYMBOLS = (%i[format expression filter] + COMMON_RESERVED_KEYWORDS + AGGREGATE_FUNCTIONS).freeze
+      RESERVED_RUBY_COLUMN_SYMBOLS = (%i[key filter] + COMMON_RESERVED_KEYWORDS).freeze
 
       def inner_column(*args, **kwargs)
         draft = build_draft(args, kwargs)
@@ -31,7 +31,7 @@ module Prato
         display_name, loader_id = parse_name_map(name_map)
 
         key = parse_accessor(options[:key])
-        column = ::Prato::Types::RubyColumn.new(loader_id, key: key)
+        column = ::Prato::Types::RubyColumn.new(loader_id, key: key, filter: options[:filter])
 
         @draft_columns << DraftColumn.new(display_name, loader_id, column)
         inner_ruby_loader(loader_id, &block) if block_given?
@@ -168,16 +168,16 @@ module Prato
         accessor = parse_accessor(accessor)
 
         if aggregate_function
-          column = ::Prato::Types::AggregateColumn.new(aggregate_function, aggregate_accessor, format: options[:format])
+          column = ::Prato::Types::AggregateColumn.new(aggregate_function, aggregate_accessor, format: options[:format], filter: options[:filter])
           DraftColumn.new(accessor, nil, column, only: only, query_only: query_only)
         elsif options[:expression]
-          column = ::Prato::Types::ExpressionColumn.new(options[:expression], format: options[:format])
+          column = ::Prato::Types::ExpressionColumn.new(options[:expression], format: options[:format], filter: options[:filter])
           DraftColumn.new(override_name, accessor, column, only: only, query_only: query_only)
         elsif accessor.is_a?(Array) && accessor.length > 1
-          column = ::Prato::Types::AssociationColumn.new(accessor, format: options[:format])
+          column = ::Prato::Types::AssociationColumn.new(accessor, format: options[:format], filter: options[:filter])
           DraftColumn.new(override_name, accessor, column, only: only, query_only: query_only)
         else
-          column = ::Prato::Types::DirectColumn.new(accessor, format: options[:format])
+          column = ::Prato::Types::DirectColumn.new(accessor, format: options[:format], filter: options[:filter])
           DraftColumn.new(override_name, accessor, column, only: only, query_only: query_only)
         end
       end
