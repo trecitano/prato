@@ -148,10 +148,10 @@ module Prato
           when :in          then arel_node.in(Array(value))
           when :not_in      then arel_node.not_in(Array(value))
           when :contains
-            sanitized = ActiveRecord::Base.sanitize_sql_like(value.to_s)
+            sanitized = sanitize_like(value.to_s)
             arel_node.matches("%#{sanitized}%")
           when :not_contains
-            sanitized = ActiveRecord::Base.sanitize_sql_like(value.to_s)
+            sanitized = sanitize_like(value.to_s)
             arel_node.does_not_match("%#{sanitized}%")
           when :between                 then arel_node.gteq(value[0]).and(arel_node.lteq(value[1]))
           when :not_between             then arel_node.lt(value[0]).or(arel_node.gt(value[1]))
@@ -248,6 +248,17 @@ module Prato
             else
               []
             end
+          end
+        end
+
+        require "active_record/version"
+        if Gem::Version.new(ActiveRecord::VERSION::STRING) >= Gem::Version.new("5.2")
+          def sanitize_like(value)
+            ActiveRecord::Base.sanitize_sql_like(value.to_s)
+          end
+        else
+          def sanitize_like(value)
+            ActiveRecord::Base.send(:sanitize_sql_like, value.to_s)
           end
         end
       end

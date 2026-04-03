@@ -9,20 +9,16 @@ module Prato
         return scope.model.arel_table if association_path.empty?
 
         expanded = expand_through_associations(scope.model, association_path)
-
-        current_table = scope.model.arel_table
-        current_model = scope.model
         join_sources = scope.arel.join_sources
 
-        expanded.each do |assoc_name|
-          reflection = current_model.reflect_on_association(assoc_name)
-          raise ArgumentError, "Unknown association '#{assoc_name}' on #{current_model}" unless reflection
+        table = walk_join_path(scope.model, scope.model.arel_table, expanded, join_sources)
 
-          current_table = find_join_table(join_sources, reflection, current_table)
-          current_model = reflection.klass
+        unless table
+          raise ArgumentError,
+                "Unable to resolve table alias for association path #{association_path.inspect}"
         end
 
-        current_table
+        table
       end
 
       private
@@ -51,7 +47,13 @@ module Prato
         end
       end
 
-      def find_join_table(join_sources, reflection, parent_table)
+      def walk_join_path(model, parent_table, path, join_sources)
+        return parent_table if path.empty?
+
+        assoc_name, *rest = path
+        reflection = model.reflect_on_association(assoc_name)
+        return nil unless reflection
+
         fk = reflection.foreign_key.to_s
         target_table_name = reflection.klass.table_name
         parent_id = table_identifier(parent_table)
@@ -62,10 +64,11 @@ module Prato
           next unless on_has_fk?(join.right.expr, fk)
           next unless on_references?(join.right.expr, parent_id)
 
-          return joined_table
+          result = walk_join_path(reflection.klass, joined_table, rest, join_sources)
+          return result if result
         end
 
-        raise ArgumentError, "Unable to resolve table alias for #{reflection.name.inspect}"
+        nil
       end
 
       def base_table_name(table)
