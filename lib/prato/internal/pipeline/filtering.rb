@@ -163,7 +163,7 @@ module Prato
         end
 
         def ensure_joins(scope, column, operator)
-          Internal::SqlSupport.ensure_join(scope, column, left_outer: operator == :not_present)
+          Internal::JoinHelper.ensure_join(scope, column, left_outer: operator == :not_present)
         end
 
         def ensure_left_joins_for_filters(scope, spec, filters)
@@ -171,7 +171,7 @@ module Prato
             case filter
             when Query::Filter
               column = spec.columns[filter.field]
-              scope = Internal::SqlSupport.ensure_join(scope, column, left_outer: true)
+              scope = Internal::JoinHelper.ensure_join(scope, column, left_outer: true)
             when Query::AndFilter, Query::OrFilter
               scope = ensure_left_joins_for_filters(scope, spec, filter.filters)
             end

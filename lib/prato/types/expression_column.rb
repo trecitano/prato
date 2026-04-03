@@ -27,7 +27,7 @@ module Prato
       end
 
       def select_node
-        @arel_node.as(@sql_alias)
+        Arel::Nodes::As.new(@arel_node, Arel.sql(@sql_alias))
       end
 
       def extract_value(record, _)

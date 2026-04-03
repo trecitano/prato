@@ -27,7 +27,7 @@ module Prato
 
           sorts.each do |sort|
             column = spec.columns[sort.field]
-            scope = Internal::SqlSupport.ensure_join(scope, column, left_outer: true)
+            scope = Internal::JoinHelper.ensure_join(scope, column, left_outer: true)
             node = column.sql_node_for(scope)
             order = sort.order == :desc ? node.desc : node.asc
             scope = scope.order(order)

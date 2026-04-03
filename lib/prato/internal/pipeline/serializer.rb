@@ -28,7 +28,7 @@ module Prato
             association_paths << column.association_path if column.is_a?(Types::AssociationColumn)
           end
 
-          scope = Internal::SqlSupport.ensure_left_joins(scope, association_paths.uniq)
+          scope = Internal::JoinHelper.ensure_left_joins(scope, association_paths.uniq)
 
           selects = fields.map do |field|
             column = columns[field]

@@ -19,6 +19,7 @@ require_relative "prato/types/aggregate_column"
 require_relative "prato/types/ruby_column"
 
 require_relative "prato/internal/lazy_loader_cache"
+require_relative "prato/internal/join_helper"
 require_relative "prato/internal/sql_support"
 require_relative "prato/internal/query_state"
 require_relative "prato/internal/specification"
