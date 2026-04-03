@@ -18,6 +18,26 @@ module Prato
         scope.left_joins(*join_hashes_for(association_paths))
       end
 
+      def table_for(scope, association_path)
+        return scope.model.arel_table if association_path.empty?
+
+        expanded = expand_through_associations(scope.model, association_path)
+
+        current_table = scope.model.arel_table
+        current_model = scope.model
+        join_sources = scope.arel.join_sources
+
+        expanded.each do |assoc_name|
+          reflection = current_model.reflect_on_association(assoc_name)
+          raise ArgumentError, "Unknown association '#{assoc_name}' on #{current_model}" unless reflection
+
+          current_table = find_join_table(join_sources, reflection, current_table)
+          current_model = reflection.klass
+        end
+
+        current_table
+      end
+
       def join_hash_for(path)
         return path.first if path.length == 1
 
@@ -28,8 +48,6 @@ module Prato
         result = {}
 
         paths.each do |path|
-          next if path.empty?
-
           current = result
           path.each do |assoc|
             current[assoc] ||= {}
@@ -40,78 +58,94 @@ module Prato
         simplify_join_hash(result)
       end
 
-      def table_for(scope, association_path)
-        return scope.model.arel_table if association_path.empty?
-
-        join_dependencies_for(scope).each do |join_dependency|
-          node = find_node(join_dependency.send(:join_root), association_path)
-          return node.table if node
-        end
-
-        raise ArgumentError, "Unable to resolve SQL table alias for association path #{association_path.inspect}"
-      end
-
       private
 
-      def join_dependencies_for(scope)
-        if scope.respond_to?(:build_join_buckets, true)
-          buckets, join_type = scope.send(:build_join_buckets)
+      def expand_through_associations(model, path)
+        expanded = []
+        current_model = model
 
-          join_dependency = scope.construct_join_dependency(buckets[:named_join], join_type)
-          alias_tracker = scope.alias_tracker(buckets[:leading_join] + buckets[:join_node])
+        path.each do |assoc_name|
+          reflection = current_model.reflect_on_association(assoc_name)
+          raise ArgumentError, "Unknown association '#{assoc_name}' on #{current_model}" unless reflection
 
-          stashed_join_dependencies = buckets[:stashed_join]
+          expand_reflection(reflection, expanded)
+          current_model = reflection.klass
+        end
 
-          join_dependency.join_constraints(stashed_join_dependencies, alias_tracker, scope.references_values)
-          [join_dependency, *stashed_join_dependencies]
+        expanded
+      end
+
+      def expand_reflection(reflection, result)
+        if reflection.through_reflection?
+          expand_reflection(reflection.through_reflection, result)
+          expand_reflection(reflection.source_reflection, result)
         else
-          alias_tracker = scope.alias_tracker
-          join_dependencies = []
-
-          joins_values = named_joins_for(scope.joins_values)
-          unless joins_values.empty?
-            join_dependency = ActiveRecord::Associations::JoinDependency.new(scope.model, scope.table, joins_values)
-            join_dependency.join_constraints([], Arel::Nodes::InnerJoin, alias_tracker)
-            join_dependencies << join_dependency
-          end
-
-          left_outer_joins_values = named_joins_for(scope.left_outer_joins_values)
-          unless left_outer_joins_values.empty?
-            join_dependency = ActiveRecord::Associations::JoinDependency.new(scope.model, scope.table,
-                                                                             left_outer_joins_values)
-            join_dependency.join_constraints([], Arel::Nodes::OuterJoin, alias_tracker)
-            join_dependencies << join_dependency
-          end
-
-          join_dependencies
+          result << reflection.name
         end
       end
 
-      def named_joins_for(join_values)
-        Array(join_values).flat_map do |join_value|
-          if join_value.is_a?(Array)
-            named_joins_for(join_value)
-          elsif join_value.is_a?(Hash) || join_value.is_a?(Symbol)
-            [join_value]
-          else
-            []
-          end
+      def find_join_table(join_sources, reflection, parent_table)
+        fk = reflection.foreign_key.to_s
+        target_table_name = reflection.klass.table_name
+        parent_id = table_identifier(parent_table)
+
+        join_sources.each do |join|
+          joined_table = join.left
+          next unless base_table_name(joined_table) == target_table_name
+          next unless on_has_fk?(join.right.expr, fk)
+          next unless on_references?(join.right.expr, parent_id)
+
+          return joined_table
+        end
+
+        raise ArgumentError, "Unable to resolve table alias for #{reflection.name.inspect}"
+      end
+
+      def base_table_name(table)
+        case table
+        when Arel::Nodes::TableAlias then table.left.name
+        when Arel::Table then table.name
         end
       end
 
-      def find_node(root, association_path)
-        association_path.each do |assoc_name|
-          root = root.children.find { |child| child.reflection.name == assoc_name }
-          return nil unless root
+      def table_identifier(table)
+        case table
+        when Arel::Nodes::TableAlias then table.right.to_s
+        when Arel::Table then table.name
         end
+      end
 
-        root
+      def on_has_fk?(expr, fk)
+        each_equality(expr).any? do |eq|
+          attr_named?(eq.left, fk) || attr_named?(eq.right, fk)
+        end
+      end
+
+      def on_references?(expr, parent_id)
+        each_equality(expr).any? do |eq|
+          attr_from_table?(eq.left, parent_id) || attr_from_table?(eq.right, parent_id)
+        end
+      end
+
+      def attr_named?(node, name)
+        node.respond_to?(:name) && node.name.to_s == name
+      end
+
+      def attr_from_table?(node, table_id)
+        node.respond_to?(:relation) && table_identifier(node.relation) == table_id
+      end
+
+      def each_equality(expr, &block)
+        return enum_for(:each_equality, expr) unless block
+
+        case expr
+        when Arel::Nodes::Equality then yield expr
+        when Arel::Nodes::And then expr.children.each { |c| each_equality(c, &block) }
+        end
       end
 
       def simplify_join_hash(hash)
-        hash.map do |key, value|
-          value.empty? ? key : { key => simplify_join_hash(value) }
-        end
+        hash.map { |key, value| value.empty? ? key : { key => simplify_join_hash(value) } }
       end
     end
   end
