@@ -251,14 +251,13 @@ module Prato
           end
         end
 
-        require "active_record/version"
-        if Gem::Version.new(ActiveRecord::VERSION::STRING) >= Gem::Version.new("5.2")
+        if ActiveRecordVersion.legacy?
           def sanitize_like(value)
-            ActiveRecord::Base.sanitize_sql_like(value.to_s)
+            ActiveRecord::Base.send(:sanitize_sql_like, value.to_s)
           end
         else
           def sanitize_like(value)
-            ActiveRecord::Base.send(:sanitize_sql_like, value.to_s)
+            ActiveRecord::Base.sanitize_sql_like(value.to_s)
           end
         end
       end

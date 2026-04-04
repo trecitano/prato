@@ -18,8 +18,15 @@ require_relative "prato/types/expression_column"
 require_relative "prato/types/aggregate_column"
 require_relative "prato/types/ruby_column"
 
+require_relative "prato/internal/active_record_version"
 require_relative "prato/internal/lazy_loader_cache"
-require_relative "prato/internal/join_helper"
+
+if Prato::Internal::ActiveRecordVersion.legacy?
+  require_relative "prato/internal/join_helper_legacy"
+else
+  require_relative "prato/internal/join_helper"
+end
+
 require_relative "prato/internal/sql_support"
 require_relative "prato/internal/query_state"
 require_relative "prato/internal/specification"
