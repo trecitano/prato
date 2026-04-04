@@ -5,21 +5,21 @@ module Prato
     class QueryState
       attr_reader :dataset
 
-      def self.create(base_scope)
+      def self.create(base_scope, materialization_fields)
         dataset = base_scope.dup
 
-        new(dataset, nil)
+        new(dataset, nil, materialization_fields)
       end
 
       def with_dataset(dataset)
-        self.class.new(dataset, @ruby_loaded_data)
+        self.class.new(dataset, @ruby_loaded_data, @materialization_fields)
       end
 
       def unmaterialized?
         !dataset.is_a?(Array)
       end
 
-      def materialized_dataset(spec, display_fields)
+      def materialized_dataset(spec)
         return [@dataset, @ruby_loaded_data] unless unmaterialized?
 
         columns = spec.columns
@@ -27,7 +27,7 @@ module Prato
         selects = Set.new([Arel.sql("#{scope.model.table_name}.*")])
         association_paths = []
 
-        display_fields.each do |field|
+        @materialization_fields.each do |field|
           column = columns[field]
 
           case column
@@ -75,9 +75,10 @@ module Prato
         result
       end
 
-      def initialize(dataset, ruby_loaded_data)
+      def initialize(dataset, ruby_loaded_data, materialization_fields)
         @dataset = dataset
         @ruby_loaded_data = ruby_loaded_data
+        @materialization_fields = materialization_fields
       end
     end
   end

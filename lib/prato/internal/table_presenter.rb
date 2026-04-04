@@ -9,9 +9,10 @@ module Prato
         config = spec.config
         params = resolve_parameters(raw_params, config)
 
-        return invalid_input_result(config) unless spec.valid_parameters?(params)
+        materialization_fields = spec.validate_and_extract_materialization_fields(params)
+        return invalid_input_result(config) if materialization_fields.nil?
 
-        base_query_state = QueryState.create(scope)
+        base_query_state = QueryState.create(scope, materialization_fields)
 
         filtered_query = Pipeline::Filtering.filter_query(base_query_state, spec, params&.filters)
         sorted_query = Pipeline::Sorting.sort_query(filtered_query, spec, params&.sorts)

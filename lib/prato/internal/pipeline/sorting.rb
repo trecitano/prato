@@ -13,7 +13,7 @@ module Prato
 
           any_ruby = sorts.any? { |s| spec.columns[s.field].is_a?(Types::RubyColumn) }
 
-          if any_ruby
+          if any_ruby || !query_state.unmaterialized?
             apply_ruby_sorts(query_state, spec, sorts)
           else
             apply_sql_sorts(query_state, spec, sorts)
@@ -37,8 +37,7 @@ module Prato
         end
 
         def apply_ruby_sorts(query_state, spec, sorts)
-          materialization_fields = (spec.visible_fields + sorts.map(&:field)).uniq
-          records, ruby_data = query_state.materialized_dataset(spec, materialization_fields)
+          records, ruby_data = query_state.materialized_dataset(spec)
 
           sorted = records.sort do |a, b|
             sorts.reduce(0) do |cmp, sort|

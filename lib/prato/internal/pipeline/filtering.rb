@@ -186,8 +186,7 @@ module Prato
         def apply_ruby_filters(query_state, spec, filters)
           return query_state if filters.empty?
 
-          materialization_fields = (spec.visible_fields + filter_fields(filters)).uniq
-          records, ruby_data = query_state.materialized_dataset(spec, materialization_fields)
+          records, ruby_data = query_state.materialized_dataset(spec)
 
           filtered = records.select do |record|
             filters.all? { |f| evaluate_ruby_filter(record, ruby_data, spec, f) }

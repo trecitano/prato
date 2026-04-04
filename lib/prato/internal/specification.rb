@@ -21,14 +21,16 @@ module Prato
         @config = config
       end
 
-      def valid_parameters?(params)
-        return true if params.nil?
+      def validate_and_extract_materialization_fields(params)
+        return [] if params.nil?
 
-        return false unless valid_filters?(params.filters)
-        return false unless valid_sorts?(params.sorts)
-        return false unless valid_fields?(params.fields)
+        fields = []
 
-        true
+        return nil unless collect_filter_fields(params.filters, fields)
+        return nil unless collect_sort_fields(params.sorts, fields)
+        return nil unless collect_display_fields(params.fields, fields)
+
+        fields.uniq
       end
 
       def field_mapping(field_name)
@@ -41,31 +43,53 @@ module Prato
 
       private
 
-      def valid_filters?(filters)
+
+      def collect_filter_fields(filters, fields)
         return true if filters.nil?
 
-        Array(filters).all? { |f| valid_filter?(f) }
-      end
-
-      def valid_filter?(filter)
-        case filter
-        when Query::Filter
-          @filterable_fields.include?(filter.field)
-        when Query::AndFilter, Query::OrFilter
-          filter.filters.all? { |f| valid_filter?(f) }
+        Array(filters).all? do |filter|
+          case filter
+          when Query::Filter
+            if @filterable_fields.include?(filter.field)
+              fields << filter.field
+              true
+            else
+              false
+            end
+          when Query::AndFilter, Query::OrFilter
+            collect_filter_fields(filter.filters, fields)
+          end
         end
       end
 
-      def valid_sorts?(sorts)
+
+      def collect_sort_fields(sorts, fields)
         return true if sorts.nil?
 
-        Array(sorts).all? { |sort| @sortable_fields.include?(sort.field) }
+        Array(sorts).all? do |sort|
+          if @sortable_fields.include?(sort.field)
+            fields << sort.field
+            true
+          else
+            false
+          end
+        end
       end
 
-      def valid_fields?(fields)
-        return true if fields.nil?
+      def collect_display_fields(display, fields)
+        if display.nil?
+          fields.concat(@visible_fields)
+          return true
+        end
 
-        Array(fields).all? { |field| @visible_fields.include?(field) }
+        Array(display).all? do |field|
+          if @visible_fields.include?(field)
+            fields << field
+            true
+          else
+            false
+          end
+        end
       end
     end
   end

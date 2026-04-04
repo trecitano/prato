@@ -56,7 +56,7 @@ module Prato
         end
 
         def normal_serialization(query_state, spec, fields)
-          records, ruby_loaded_data = query_state.materialized_dataset(spec, fields)
+          records, ruby_loaded_data = query_state.materialized_dataset(spec)
           columns = spec.columns
 
           records.map do |record|
