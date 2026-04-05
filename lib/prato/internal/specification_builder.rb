@@ -77,16 +77,12 @@ module Prato
         filterable_fields = Set.new
         sortable_fields = Set.new
         output_paths = {}
-        parser_field_map = {}
 
         @draft_columns.each do |draft|
           column_output_path = draft.output_paths.map do |path|
             transform_key_part(path, @config.key_transformation).to_sym
           end
           internal_column_name = Query::FieldResolver.join(draft.output_paths)
-
-          register_parser_field(parser_field_map, draft.output_paths, internal_column_name)
-          register_parser_field(parser_field_map, column_output_path, internal_column_name)
 
           if columns.key?(internal_column_name)
             raise ArgumentError,
@@ -260,13 +256,6 @@ module Prato
         when :snake_case then to_snake_case(part)
         when :none then part
         end
-      end
-
-      def register_parser_field(field_map, path, internal_column_name)
-        key = Array(path).map(&:to_s).join(".")
-        return if key.empty? || field_map.key?(key)
-
-        field_map[key] = internal_column_name
       end
 
       def to_snake_case(value)
