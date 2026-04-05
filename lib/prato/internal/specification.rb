@@ -43,7 +43,6 @@ module Prato
 
       private
 
-
       def collect_filter_fields(filters, fields)
         return true if filters.nil?
 
@@ -61,7 +60,6 @@ module Prato
           end
         end
       end
-
 
       def collect_sort_fields(sorts, fields)
         return true if sorts.nil?

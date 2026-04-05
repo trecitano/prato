@@ -6,7 +6,7 @@ module TestDisplayFields
   private
 
   def field(*parts)
-    Prato::Query::FieldPath.join(parts)
+    Prato::Query::FieldResolver.join(parts)
   end
 
   def filter(field_name, operator, value)

@@ -7,7 +7,7 @@ require_relative "prato/query/sort"
 require_relative "prato/query/and_filter"
 require_relative "prato/query/or_filter"
 require_relative "prato/query/parameters"
-require_relative "prato/query/field_path"
+require_relative "prato/query/field_resolver"
 require_relative "prato/query/default_parser"
 
 require_relative "prato/configuration"
@@ -39,7 +39,7 @@ require_relative "prato/internal/pipeline/sorting"
 
 require_relative "prato/table"
 require_relative "prato/table_builder"
-require_relative "prato/internal/table_presenter"
+require_relative "prato/internal/query_executor"
 
 module Prato
   extend self

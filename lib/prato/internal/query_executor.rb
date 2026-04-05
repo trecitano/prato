@@ -2,12 +2,12 @@
 
 module Prato
   module Internal
-    module TablePresenter
+    module QueryExecutor
       extend self
 
-      def present_table(scope, spec, raw_params:, paginated: true)
+      def execute(scope, spec, raw_params:, paginated: true)
         config = spec.config
-        params = resolve_parameters(raw_params, config)
+        params = resolve_parameters(raw_params, config, spec)
 
         materialization_fields = spec.validate_and_extract_materialization_fields(params)
         return invalid_input_result(config) if materialization_fields.nil?
@@ -31,7 +31,7 @@ module Prato
         return nil if input.nil?
         return input if input.is_a?(Query::Parameters)
 
-        config.parameter_parser.parse_parameters(input)
+        config.parameter_parser.parse_parameters(input, Prato::Query::FieldResolver.resolve_context(config))
       end
 
       def invalid_input_result(configuration)

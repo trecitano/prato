@@ -5,204 +5,110 @@ require "json"
 module Prato
   module Query
     class DefaultParser
-
-      def parse_parameters(input)
-        parsed_hash = normalize_to_hash(input)
-        normalized_hash = normalize_hash_keys(parsed_hash)
-
+      def parse_parameters(input, context)
         Prato::Query::Parameters.new(
-          page: parse_page(normalized_hash[:page]),
-          per_page: parse_per_page(normalized_hash[:per_page]),
-          filters: parse_filters(normalized_hash[:filters]),
-          sorts: parse_sorts(normalized_hash[:sorts]),
-          fields: parse_fields(normalized_hash[:fields])
+          page: parse_page(input["page"], context),
+          per_page: parse_per_page(input["per_page"], context),
+          filters: parse_filters(input["filters"], context),
+          sorts: parse_sorts(input["sorts"], context),
+          fields: parse_fields(input["fields"], context)
         )
       end
 
       def parse_page(raw_value)
-        value = raw_value&.to_i || 1
-        value.positive? ? value : 1
+        safe_parse_integer(raw_value)
       end
 
       def parse_per_page(raw_value)
-        raw_value&.to_i
+        safe_parse_integer(raw_value)
       end
 
-      def parse_filters(input)
+      def parse_filters(input, context)
         return nil if input.nil?
 
+        entries = normalize_entries_to_hash(input)
+        parse_filter_entries(entries, context)
+      end
+
+      def parse_filter_entries(entries, context, depth = 0)
+        if depth == 10
+          raise ArgumentError, "Filter nesting too deep (maximum depth: 10)"
+        end
+
+        Array(entries).map do |entry|
+          if entry.key?("or")
+            nested = parse_filter_entries(entry["or"], context, depth + 1)
+            return nil if nested.empty?
+
+            Prato::Query::OrFilter.new(nested)
+          elsif entry.key?("and")
+            nested = parse_filter_entries(entry["and"], context, depth + 1)
+            return nil if nested.empty?
+
+            Prato::Query::AndFilter.new(nested)
+          else
+            field = entry["field"]
+            operator = entry["operator"]
+            value = entry["value"]
+
+            Prato::Query::Filter.new(
+              parse_field(field, context),
+              operator.to_sym,
+              value
+            )
+          end
+        end
+      end
+
+      def parse_sorts(input, context)
+        return nil if input.nil?
+
+        entries = normalize_entries_to_hash(input)
+
+        Array(entries).map do |entry|
+          field = entry["field"]
+          order = entry["order"]
+
+          Prato::Query::Sort.new(parse_field(field, context), order)
+        end
+      end
+
+      def parse_fields(input, context)
+        return nil if input.nil?
+
+        entries = normalize_entries_to_hash(input)
+
+        Array(entries).map do |entry|
+          parse_field(entry, context)
+        end
+      end
+
+      protected
+
+      def parse_field(field, field_resolver)
+        fields = field.split(".")
+        field_resolver.call(fields)
+      end
+
+      def safe_parse_integer(number)
+        return nil if number.nil?
+
+        begin
+          Integer(number)
+        rescue ArgumentError
+          nil
+        end
+      end
+
+      def normalize_entries_to_hash(input)
         case input
         when String
-          parse_filters(parse_json_value(input, context: 'filters'))
-        when Prato::Query::AndFilter
+          JSON.parse(input)
+        when Array, Hash
           input
-        when Prato::Query::OrFilter, Prato::Query::Filter
-          Prato::Query::AndFilter.new([input])
-        when Hash
-          Prato::Query::AndFilter.new([parse_filter_entry(input)])
-        when Array
-          filters = input.map { |entry| parse_filter_entry(entry) }
-          filters.empty? ? nil : Prato::Query::AndFilter.new(filters)
         else
           raise ArgumentError, "Invalid filters type: #{input.class}"
         end
-      end
-
-      def parse_filter_entry(entry)
-        return entry if entry.is_a?(Prato::Query::Filter) ||
-                        entry.is_a?(Prato::Query::AndFilter) ||
-                        entry.is_a?(Prato::Query::OrFilter)
-
-        filter_hash = normalize_hash_keys(coerce_hash(entry, context: "filter"))
-
-        if filter_hash.key?(:or)
-          nested = array_wrap(filter_hash[:or]).map { |nested_entry| parse_filter_entry(nested_entry) }
-          Prato::Query::OrFilter.new(nested)
-        elsif filter_hash.key?(:and)
-          nested = array_wrap(filter_hash[:and]).map { |nested_entry| parse_filter_entry(nested_entry) }
-          Prato::Query::AndFilter.new(nested)
-        else
-          field = filter_hash[:field]
-          operator = filter_hash[:operator]
-          raise ArgumentError, "Each filter must include :field and :operator." if field.nil? || operator.nil?
-
-          Prato::Query::Filter.new(parse_field(field), operator.to_sym, filter_hash[:value])
-        end
-      end
-
-      # Converts field string to symbol or array of symbols
-      # "status" -> :status
-      # "bankAccount.branchBankAccountId" -> [:bankAccount, :branchBankAccountId]
-      def parse_field(field)
-        case field
-        when Symbol
-          field
-        when String
-          parts = field.split('.').map(&:to_sym)
-          Prato::Query::FieldPath.join(parts)
-        when Array
-          symbols = field.map do |part|
-            unless part.respond_to?(:to_sym)
-              raise ArgumentError,
-                    "Field path parts must be symbols or strings. Got: #{part.class}"
-            end
-
-            part.to_sym
-          end
-
-          Prato::Query::FieldPath.join(symbols)
-        else
-          raise ArgumentError, "Invalid field value: #{field.inspect}"
-        end
-      end
-
-      def parse_sorts(input)
-        return nil if input.nil?
-
-        case input
-        when String
-          parse_sorts(parse_json_value(input, context: 'sorts'))
-        when Prato::Query::Sort
-          [input]
-        when Hash
-          [parse_sort_entry(input)]
-        when Array
-          input.map { |entry| parse_sort_entry(entry) }
-        else
-          raise ArgumentError, "Invalid sorts type: #{input.class}"
-        end
-      end
-
-      def parse_sort_entry(entry)
-        return entry if entry.is_a?(Prato::Query::Sort)
-
-        sort_hash = normalize_entry_hash(entry, context: 'sort')
-        field = sort_hash[:field]
-        raise ArgumentError, 'Each sort must include :field.' if field.nil?
-
-        direction = if sort_hash.key?(:direction)
-                      normalize_sort_direction(sort_hash[:direction])
-                    else
-                      truthy?(sort_hash[:desc]) ? :desc : :asc
-                    end
-
-        Prato::Query::Sort.new(parse_field(field), direction)
-      end
-
-      def parse_fields(fields)
-        return nil if fields.nil?
-      end
-
-      private
-
-      def array_wrap(value)
-        return [] if value.nil?
-        return value if value.is_a?(Array)
-
-        [value]
-      end
-
-      def normalize_to_hash(input)
-        case input
-        when nil
-          {}
-        when String
-          parsed = parse_json(input, context: "table params")
-          raise ArgumentError, "Expected table params JSON to decode to an object." unless parsed.is_a?(Hash)
-
-          parsed
-        else
-          input
-        end
-      end
-
-      def normalize_hash_keys(hash)
-        hash.each_with_object({}) do |(key, value), result|
-          result[key.respond_to?(:to_sym) ? key.to_sym : key] = value
-        end
-      end
-
-      def coerce_hash(value, context: nil)
-        case value
-        when Hash
-          value
-        when String
-          parse_json_value(value, context: context)
-        else
-          raise ArgumentError, "Expected a Hash for #{context}, got #{value.class}"
-        end
-      end
-
-      def normalize_entry_hash(entry, context: nil)
-        normalize_hash_keys(coerce_hash(entry, context: context))
-      end
-
-      def normalize_sort_direction(value)
-        case value.to_s.downcase
-        when "desc", "descending"
-          :desc
-        else
-          :asc
-        end
-      end
-
-      def truthy?(value)
-        case value
-        when true, 1, "1", "true", "yes"
-          true
-        else
-          false
-        end
-      end
-
-      def parse_json(string, context: nil)
-        JSON.parse(string)
-      rescue JSON::ParserError => e
-        raise ArgumentError, "Invalid JSON for #{context}: #{e.message}"
-      end
-
-      def parse_json_value(string, context: nil)
-        parse_json(string, context: context)
       end
     end
   end

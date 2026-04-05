@@ -10,7 +10,7 @@ module FilteringCustomHelpers
   end
 
   def resolve_field(field)
-    field.is_a?(Array) ? Prato::Query::FieldPath.join(field) : field
+    field.is_a?(Array) ? Prato::Query::FieldResolver.join(field) : field
   end
 
   def assert_names(result, expected_names)

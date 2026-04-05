@@ -7,7 +7,7 @@ module Prato
     end
 
     def to_page(scope, params: nil)
-      Internal::TablePresenter.present_table(
+      Internal::QueryExecutor.execute(
         scope,
         @spec,
         raw_params: params,
@@ -16,7 +16,7 @@ module Prato
     end
 
     def to_table(scope, params: nil)
-      Internal::TablePresenter.present_table(
+      Internal::QueryExecutor.execute(
         scope,
         @spec,
         raw_params: params,
