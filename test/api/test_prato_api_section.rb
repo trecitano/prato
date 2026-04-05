@@ -12,6 +12,10 @@ module TestPratoApiSection
   def names_for(table, scope: User.all, params: nil)
     table.to_table(scope, params: params)[:entries].map { |entry| entry[:name] }
   end
+
+  def titles_for(table, scope: Post.all, params: nil)
+    table.to_table(scope, params: params)[:entries].map { |entry| entry[:title] }
+  end
 end
 
 class TestApiSectionSerialization < Minitest::Test
@@ -168,7 +172,7 @@ class TestApiSectionQuerying < Minitest::Test
       }
     )
 
-    assert_equal %w[Alice Bob], result[:entries].map { |entry| entry[:name] }
+    assert_equal(%w[Alice Bob], result[:entries].map { |entry| entry[:name] })
     assert_equal 2, result[:totalCount]
   end
 
@@ -192,6 +196,81 @@ class TestApiSectionQuerying < Minitest::Test
     )
   end
 
+  def test_nested_association_section_fields_can_be_sorted_via_dotted_raw_params
+    table = Prato.table(Post) do
+      column(:title)
+
+      section(:post_info) do
+        section(:author) do
+          column(:name, %i[user name])
+        end
+      end
+    end
+
+    assert_equal(
+      [
+        "Draft",
+        "Hello",
+        "More Ruby",
+        "Ruby tips",
+        "Learning Rails",
+        "Young dev",
+        "Finance tips",
+        "Market update",
+        "Unpublished"
+      ],
+      titles_for(
+        table,
+        params: {
+          sorts: [
+            { field: "post_info.author.name", direction: "asc" },
+            { field: "title", direction: "asc" }
+          ]
+        }
+      )
+    )
+  end
+
+  def test_expression_section_fields_can_be_sorted_via_dotted_raw_params
+    table = Prato.table(User) do
+      column(:name)
+
+      section(:computed) do
+        column(:age_plus_ten, expression: "users.age + 10")
+      end
+    end
+
+    assert_equal(
+      %w[Dave Alice Carol Bob],
+      names_for(
+        table,
+        params: {
+          sorts: [{ field: "computed.age_plus_ten", direction: "desc" }]
+        }
+      )
+    )
+  end
+
+  def test_aggregate_section_fields_can_be_sorted_via_dotted_raw_params
+    table = Prato.table(User) do
+      column(:name)
+
+      section(:stats) do
+        column(:post_count, count: :posts)
+      end
+    end
+
+    assert_equal(
+      %w[Alice Carol Bob Dave],
+      names_for(
+        table,
+        params: {
+          sorts: [{ field: "stats.post_count", direction: "desc" }]
+        }
+      )
+    )
+  end
+
   def test_ruby_section_fields_can_be_sorted_via_dotted_raw_params
     table = Prato.table(User) do
       column(:name)
@@ -210,6 +289,31 @@ class TestApiSectionQuerying < Minitest::Test
         table,
         params: {
           sorts: [{ field: "computed.post_count", direction: "desc" }]
+        }
+      )
+    )
+  end
+
+  def test_ruby_section_fields_with_nil_values_can_be_sorted_via_dotted_raw_params
+    table = Prato.table(User) do
+      column(:name)
+
+      section(:computed) do
+        ruby_column(:company_name, key: :id) do |records, _|
+          index_records_by_id(records) { |user| user.company&.name }
+        end
+      end
+    end
+
+    assert_equal(
+      %w[Dave Carol Alice Bob],
+      names_for(
+        table,
+        params: {
+          sorts: [
+            { field: "computed.company_name", direction: "desc" },
+            { field: "name", direction: "asc" }
+          ]
         }
       )
     )

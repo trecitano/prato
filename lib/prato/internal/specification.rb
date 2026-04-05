@@ -22,7 +22,7 @@ module Prato
       end
 
       def validate_and_extract_materialization_fields(params)
-        return [] if params.nil?
+        return @visible_fields if params.nil?
 
         fields = []
 
