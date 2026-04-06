@@ -1,0 +1,8 @@
+module Prato
+  module Internal
+    module JoinHelper
+      def self.ensure_join: (::ActiveRecord::Relation scope, Specification::column_type column, ?left_outer: bool) -> ::ActiveRecord::Relation
+      def self.ensure_left_joins: (::ActiveRecord::Relation scope, Array[Array[Symbol]] association_paths) -> ::ActiveRecord::Relation
+    end
+  end
+end

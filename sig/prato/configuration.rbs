@@ -1,32 +1,35 @@
 module Prato
   class Configuration
     type key_transformation = :camelCase | :snake_case | :none
+    type invalid_input = :empty | :raise
+    type default_only = :display | :filter | :sort
 
     interface _ParameterParser
-      def parse_parameters: (untyped input) -> Query::Parameters
+      def parse_parameters: (Hash[Symbol | String, untyped] input, ^(Array[String]) -> Symbol? field_lookup) -> Query::Parameters
     end
 
     def self.config: () -> Configuration
-    def self.configure: () { (Configuration) -> void } -> Configuration
+    def self.configure: () ?{ (Configuration) -> void } -> Configuration
     def self.with_settings: (
       ?Configuration? base,
       ?key_transformation: key_transformation?,
-      ?on_invalid_input: (:empty | :raise)?,
+      ?on_invalid_input: invalid_input?,
       ?parameter_parser: _ParameterParser?,
       ?default_page_size: Integer?,
       ?maximum_page_size: Integer?,
-      ?default_only: (:display | :filter | :sort)?,
-      ?default_ruby_column_only: (:display | :filter | :sort)?
+      ?default_only: default_only?,
+      ?default_ruby_column_only: default_only?
     ) -> Configuration
 
     attr_accessor default_page_size: Integer
     attr_accessor maximum_page_size: Integer
-    attr_reader default_only: Symbol?
-    attr_reader key_transformation: key_transformation
-    attr_reader parameter_parser: _ParameterParser
+    attr_accessor key_transformation: key_transformation
+    attr_accessor on_invalid_input: invalid_input
+    attr_accessor parameter_parser: _ParameterParser
+    attr_accessor default_ruby_column_only: default_only
+    attr_reader default_only: default_only?
 
     def initialize: () -> void
-    def key_transformation=: (key_transformation value) -> key_transformation
-    def parameter_parser=: (_ParameterParser parser) -> _ParameterParser
+    def default_only=: (default_only value) -> default_only
   end
 end

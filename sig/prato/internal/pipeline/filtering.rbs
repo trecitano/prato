@@ -1,0 +1,31 @@
+module Prato
+  module Internal
+    module Pipeline
+      module Filtering
+        type filter_node = Query::Filter | Query::AndFilter | Query::OrFilter
+        type sql_node = Arel::Attributes::Attribute | Arel::Nodes::Grouping
+
+        def self.filter_query: (QueryState query_state, Specification spec, Array[filter_node]? raw_filters) -> QueryState
+
+        private
+
+        def self.classify_filters: (Specification spec, Array[filter_node] filters) -> [Array[filter_node], Array[filter_node]]
+        def self.flatten_ands: (Array[filter_node] filters) -> Array[filter_node]
+        def self.all_sql?: (Specification spec, filter_node filter) -> bool
+        def self.apply_sql_filters: (QueryState query_state, Specification spec, Array[filter_node] filters) -> QueryState
+        def self.normalize_sql_filter_tree: (Specification spec, filter_node filter) -> filter_node
+        def self.normalize_sql_leaf_filter: (Specification spec, Query::Filter filter) -> filter_node
+        def self.apply_sql_filter: (QueryState query_state, Specification spec, filter_node filter) -> QueryState
+        def self.build_sql_condition: (::ActiveRecord::Relation scope, Specification spec, filter_node filter) -> Arel::Nodes::Node
+        def self.build_operator_condition: (sql_node arel_node, Query::Filter::filter_operator operator, Query::Filter::value_type value) -> Arel::Nodes::Node
+        def self.ensure_joins: (::ActiveRecord::Relation scope, Specification::column_type column, Query::Filter::filter_operator operator) -> ::ActiveRecord::Relation
+        def self.ensure_left_joins_for_filters: (::ActiveRecord::Relation scope, Specification spec, Array[filter_node] filters) -> ::ActiveRecord::Relation
+        def self.apply_ruby_filters: (QueryState query_state, Specification spec, Array[filter_node] filters) -> QueryState
+        def self.evaluate_ruby_filter: (::ActiveRecord::Base record, LazyLoaderCache? ruby_data, Specification spec, filter_node filter) -> bool
+        def self.compare_value: (untyped actual, Query::Filter::filter_operator operator, Query::Filter::value_type expected) -> bool
+        def self.filter_fields: (Array[filter_node] filters) -> Array[Symbol?]
+        def self.sanitize_like: (String value) -> String
+      end
+    end
+  end
+end

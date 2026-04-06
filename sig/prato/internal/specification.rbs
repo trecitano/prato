@@ -1,39 +1,41 @@
 module Prato
   module Internal
     class Specification
-      type column_type = Types::Column | Types::ExpressionColumn | Types::AggregateColumn | Types::RubyColumn
-      type filter_type = Query::Filter | Array[Query::Filter | Query::AndFilter | Query::OrFilter]
+      type column_type = Types::DirectColumn | Types::AssociationColumn | Types::ExpressionColumn | Types::AggregateColumn | Types::RubyColumn
+      type filter_node = Query::Filter | Query::AndFilter | Query::OrFilter
+      type loader_id = Symbol | String
 
       attr_reader columns: Hash[Symbol, column_type]
-      attr_reader ruby_loaders: Hash[Symbol, Proc]?
+      attr_reader visible_fields: Array[Symbol]
+      attr_reader ruby_loaders: Hash[loader_id, ^(Array[::ActiveRecord::Base], LazyLoaderCache) -> untyped]?
+      attr_reader field_lookup: Hash[Array[String], Symbol]
       attr_reader config: Configuration
 
       @visible_fields: Array[Symbol]
       @filterable_fields: Set[Symbol]
       @sortable_fields: Set[Symbol]
-      @output_paths: Hash[Symbol, Symbol | Array[Symbol]]
+      @output_paths: Hash[Symbol, Array[Symbol]]
 
       def initialize: (
-          columns: Hash[Symbol, column_type],
-          visible_fields: Set[Symbol],
-          filterable_fields: Set[Symbol],
-          sortable_fields: Set[Symbol],
-          output_paths: Hash[Symbol, Array[Symbol]],
-          ruby_loaders: Hash[Symbol, Proc]?,
-          config: Configuration
-        ) -> void
+        columns: Hash[Symbol, column_type],
+        visible_fields: Array[Symbol],
+        filterable_fields: Set[Symbol],
+        sortable_fields: Set[Symbol],
+        output_paths: Hash[Symbol, Array[Symbol]],
+        field_lookup: Hash[Array[String], Symbol],
+        ruby_loaders: Hash[loader_id, ^(Array[::ActiveRecord::Base], LazyLoaderCache) -> untyped]?,
+        config: Configuration
+      ) -> void
 
-      def visible_fields: () -> Set[Symbol]
-      def valid_parameters?: (Query::Parameters? params) -> bool
+      def validate_and_extract_materialization_fields: (Query::Parameters? params) -> Array[Symbol]?
+      def field_mapping: (Symbol field_name) -> Array[Symbol]
       def sql_only?: (Array[Symbol] display_fields) -> bool
 
       private
 
-      def valid_filters?: (filter_type? filters) -> bool
-      def valid_filter?: (Query::Filter | Query::AndFilter | Query::OrFilter filter) -> bool
-      def valid_sorts?: (Query::Sort | Array[Query::Sort] | nil sorts) -> bool?
-      def valid_fields?: (untyped fields) -> bool?
-
+      def collect_filter_fields: (Array[filter_node]? filters, Array[Symbol] fields) -> bool
+      def collect_sort_fields: (Array[Query::Sort]? sorts, Array[Symbol] fields) -> bool
+      def collect_display_fields: (Array[Symbol?]? display, Array[Symbol] fields) -> bool
     end
   end
 end

@@ -1,0 +1,28 @@
+module Prato
+  module Query
+    class DefaultParser
+      type filter_node = Filter | AndFilter | OrFilter
+      type params_hash = Hash[String | Symbol, untyped]
+      type field_lookup = ^(Array[String]) -> Symbol?
+      type filter_entries = params_hash | Array[params_hash]
+      type sort_entries = params_hash | Array[params_hash]
+      type field_entries = Array[String]
+
+      def parse_parameters: (params_hash input, field_lookup field_lookup) -> Parameters
+
+      def parse_page: (nil | String | Integer raw_value) -> Integer?
+      def parse_per_page: (nil | String | Integer raw_value) -> Integer?
+      def parse_filters: (nil | String | filter_entries input, field_lookup field_lookup) -> Array[filter_node]?
+      def parse_filter_entries: (filter_entries entries, field_lookup field_lookup, ?Integer depth) -> Array[filter_node]
+      def parse_sorts: (nil | String | sort_entries input, field_lookup field_lookup) -> Array[Sort]?
+      def parse_fields: (nil | String | field_entries input, field_lookup field_lookup) -> Array[Symbol?]?
+
+      private
+
+      def parse_field: (String field, field_lookup field_resolver) -> Symbol?
+      def safe_parse_integer: (nil | String | Integer number) -> Integer?
+      def normalize_entries_to_hash: (String | params_hash | Array[params_hash] input) -> params_hash | Array[params_hash]
+      def hash_access: (params_hash entry, String key) -> untyped
+    end
+  end
+end

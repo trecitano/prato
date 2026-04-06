@@ -1,0 +1,8 @@
+module Prato
+  module Internal
+    class LazyLoaderCache < Hash[Symbol | String, untyped]
+      def initialize: (Array[::ActiveRecord::Base] records) -> void
+      def []: (Symbol | String key) -> untyped
+    end
+  end
+end

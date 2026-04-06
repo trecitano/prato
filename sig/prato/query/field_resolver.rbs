@@ -1,0 +1,10 @@
+module Prato
+  module Query
+    module FieldResolver
+      SEPARATOR: String
+
+      def self.join: (Symbol | String | Array[Symbol | String] parts) -> Symbol
+      def self.resolve_context: (Hash[Array[String], Symbol] field_lookup) -> ^(Array[String]) -> Symbol?
+    end
+  end
+end

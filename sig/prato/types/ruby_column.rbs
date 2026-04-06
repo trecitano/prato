@@ -1,10 +1,14 @@
 module Prato
   module Types
     class RubyColumn
-      @loader: Symbol
-      @key: Symbol | Array[Symbol]
+      type path_part = Symbol | String
+      type key_type = Symbol | String | Numeric | bool | nil | Array[path_part] | ^(::ActiveRecord::Base) -> untyped
+      type ruby_filter = ^(untyped, Query::Filter::filter_operator, Query::Filter::value_type) -> bool?
 
-      def initialize: (Symbol loader, ?key: Symbol | Array[Symbol]) -> void
+      attr_reader filter: ruby_filter?
+
+      def initialize: (Symbol | String loader, key: key_type, ?filter: ruby_filter?) -> void
+      def extract_value: (::ActiveRecord::Base record, Internal::LazyLoaderCache ruby_data) -> untyped
     end
   end
 end

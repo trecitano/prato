@@ -118,7 +118,12 @@ module Prato
       end
 
       def hash_access(entry, key)
-        entry[key] || entry[key.to_sym]
+        value = entry[key]
+        if value.nil?
+           entry[key.to_sym]
+        else
+          value
+        end
       end
     end
   end

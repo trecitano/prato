@@ -1,0 +1,7 @@
+module Prato
+  module Internal
+    module SqlSupport
+      def self.table_for: (::ActiveRecord::Relation scope, Array[Symbol] association_path) -> (Arel::Table | Arel::Nodes::TableAlias)
+    end
+  end
+end

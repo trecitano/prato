@@ -1,18 +1,17 @@
 module Prato
   module Types
-    class ExpressionColumn
+    class DirectColumn
+      type accessor = Symbol | String | Array[Symbol | String]
       type formatter = ^(untyped) -> untyped
       type sql_filter = ^(::ActiveRecord::Relation, Query::Filter::filter_operator, Query::Filter::value_type) -> ::ActiveRecord::Relation?
-      type sql_node = Arel::Nodes::Grouping
+      type sql_node = Arel::Attributes::Attribute
 
-      attr_reader arel_node: sql_node?
       attr_reader format: formatter?
       attr_reader filter: sql_filter?
 
-      def initialize: (Symbol | String expression, ?format: formatter?, ?filter: sql_filter?) -> void
+      def initialize: (accessor accessor, ?format: formatter?, ?filter: sql_filter?) -> void
       def resolve_arel!: (singleton(::ActiveRecord::Base) base_model, Symbol display_id) -> void
       def sql_node_for: (::ActiveRecord::Relation scope) -> sql_node
-      def select_node: () -> Arel::Nodes::As
       def extract_value: (::ActiveRecord::Base record, nil ruby_data) -> untyped
     end
   end

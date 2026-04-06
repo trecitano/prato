@@ -1,8 +1,7 @@
 module Prato
   class Table
-    type params_input = String | Hash[Symbol | String, untyped] | Query::Parameters | nil
-    type entry_value = Symbol | Hash[Symbol, entry_value]
-    type entry = Hash[Symbol, entry_value]
+    type params_input = Hash[Symbol | String, untyped] | Query::Parameters | nil
+    type entry = Hash[Symbol, untyped]
     type result = { entries: Array[entry], totalCount: Integer }
 
     @spec: Internal::Specification

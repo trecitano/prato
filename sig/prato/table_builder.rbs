@@ -2,51 +2,61 @@ module Prato
   class TableBuilder
     type label_type = Symbol | String
     type formatter = ^(untyped) -> untyped
+    type path_part = Symbol | String
+    type accessor = Symbol | String | Array[path_part] | Hash[path_part, untyped]
+    type aggregate_accessor = Symbol | String | Array[path_part]
+    type sql_filter = ^(::ActiveRecord::Relation, Query::Filter::filter_operator, Query::Filter::value_type) -> ::ActiveRecord::Relation?
+    type ruby_filter = ^(untyped, Query::Filter::filter_operator, Query::Filter::value_type) -> bool?
     type column_only_option = :display | :filter | :sort
-    type agg_arg = Array[Symbol]
+    type query_only_option = :filter | :sort
+    type loader_id = Symbol | String
+    type ruby_key = Symbol | String | Numeric | bool | nil | Array[path_part] | ^(::ActiveRecord::Base) -> untyped
 
-    attr_reader spec: Internal::SpecificationBuilder
+    attr_reader spec_builder: Internal::SpecificationBuilder
 
     def initialize: () -> void
 
     def column:
-      (Symbol column_id, ?format: formatter, ?only: column_only_option) -> void
-      | (label_type label, Symbol | Array[Symbol] accessor, ?format: formatter, ?only: column_only_option) -> void
-      | (label_type label, expression: Symbol | String, ?format: formatter, ?only: column_only_option) -> void
-      | (label_type label, count: Symbol | Array[Symbol], ?format: formatter, ?only: column_only_option) -> void
-      | (label_type label, sum: Array[Symbol], ?format: formatter, ?only: column_only_option) -> void
-      | (label_type label, avg: Array[Symbol], ?format: formatter, ?only: column_only_option) -> void
-      | (label_type label, min: Array[Symbol], ?format: formatter, ?only: column_only_option) -> void
-      | (label_type label, max: Array[Symbol], ?format: formatter, ?only: column_only_option) -> void
-      | (**(Symbol | Array[Symbol] | formatter)) -> void
+      (Symbol column_id, ?format: formatter, ?filter: sql_filter, ?only: column_only_option) -> void
+      | (label_type label, accessor accessor, ?format: formatter, ?filter: sql_filter, ?only: column_only_option) -> void
+      | (Hash[label_type, accessor] mapping, ?format: formatter, ?filter: sql_filter, ?only: column_only_option) -> void
+      | (label_type label, expression: Symbol | String, ?format: formatter, ?filter: sql_filter, ?only: column_only_option) -> void
+      | (label_type label, count: aggregate_accessor, ?format: formatter, ?filter: sql_filter, ?only: column_only_option) -> void
+      | (label_type label, sum: aggregate_accessor, ?format: formatter, ?filter: sql_filter, ?only: column_only_option) -> void
+      | (label_type label, avg: aggregate_accessor, ?format: formatter, ?filter: sql_filter, ?only: column_only_option) -> void
+      | (label_type label, min: aggregate_accessor, ?format: formatter, ?filter: sql_filter, ?only: column_only_option) -> void
+      | (label_type label, max: aggregate_accessor, ?format: formatter, ?filter: sql_filter, ?only: column_only_option) -> void
 
     def query_column:
-      (Symbol column_id, ?format: formatter, ?only: :filter | :sort) -> void
-      | (label_type label, Symbol | Array[Symbol] accessor, ?format: formatter, ?only: :filter | :sort) -> void
-      | (label_type label, expression: Symbol | String, ?format: formatter, ?only: :filter | :sort) -> void
-      | (label_type label, count: Symbol | Array[Symbol], ?format: formatter, ?only: :filter | :sort) -> void
-      | (label_type label, sum: agg_arg, ?format: formatter, ?only: :filter | :sort) -> void
-      | (label_type label, avg: agg_arg, ?format: formatter, ?only: :filter | :sort) -> void
-      | (label_type label, min: agg_arg, ?format: formatter, ?only: :filter | :sort) -> void
-      | (label_type label, max: agg_arg, ?format: formatter, ?only: :filter | :sort) -> void
-      | (**(Symbol | Array[Symbol] | formatter)) -> void
+      (Symbol column_id, ?format: formatter, ?filter: sql_filter, ?only: query_only_option) -> void
+      | (label_type label, accessor accessor, ?format: formatter, ?filter: sql_filter, ?only: query_only_option) -> void
+      | (Hash[label_type, accessor] mapping, ?format: formatter, ?filter: sql_filter, ?only: query_only_option) -> void
+      | (label_type label, expression: Symbol | String, ?format: formatter, ?filter: sql_filter, ?only: query_only_option) -> void
+      | (label_type label, count: aggregate_accessor, ?format: formatter, ?filter: sql_filter, ?only: query_only_option) -> void
+      | (label_type label, sum: aggregate_accessor, ?format: formatter, ?filter: sql_filter, ?only: query_only_option) -> void
+      | (label_type label, avg: aggregate_accessor, ?format: formatter, ?filter: sql_filter, ?only: query_only_option) -> void
+      | (label_type label, min: aggregate_accessor, ?format: formatter, ?filter: sql_filter, ?only: query_only_option) -> void
+      | (label_type label, max: aggregate_accessor, ?format: formatter, ?filter: sql_filter, ?only: query_only_option) -> void
 
     def ruby_column:
-      (Symbol | String loader_label, ?key: Symbol) -> void
-      | (Symbol | String label, Symbol loader_id, ?key: Symbol) -> void
-      | (**Symbol) -> void
+      (label_type label, ?key: ruby_key, ?filter: ruby_filter) -> void
+      | (label_type label, ?key: ruby_key, ?filter: ruby_filter) { (Array[::ActiveRecord::Base], Internal::LazyLoaderCache) -> untyped } -> void
+      | (Hash[label_type, loader_id] mapping, ?key: ruby_key, ?filter: ruby_filter) -> void
+      | (Hash[label_type, loader_id] mapping, ?key: ruby_key, ?filter: ruby_filter) { (Array[::ActiveRecord::Base], Internal::LazyLoaderCache) -> untyped } -> void
+      | (label_type label, loader_id loader_id, ?key: ruby_key, ?filter: ruby_filter) -> void
+      | (label_type label, loader_id loader_id, ?key: ruby_key, ?filter: ruby_filter) { (Array[::ActiveRecord::Base], Internal::LazyLoaderCache) -> untyped } -> void
 
     def section: (Symbol | String id) { () -> void } -> void
-    def ruby_loader: (Symbol id) { (Array[ActiveRecord::Base] records, Hash[Symbol, untyped] loaded_data) -> untyped } -> void
+    def ruby_loader: (loader_id id) { (Array[::ActiveRecord::Base], Internal::LazyLoaderCache) -> untyped } -> void
     def configure: (
       ?Configuration? config,
       ?key_transformation: Configuration::key_transformation?,
-      ?on_invalid_input: (:empty | :raise)?,
+      ?on_invalid_input: Configuration::invalid_input?,
       ?parameter_parser: Configuration::_ParameterParser?,
       ?default_page_size: Integer?,
       ?maximum_page_size: Integer?,
-      ?default_only: (:display | :filter | :sort)?,
-      ?default_ruby_column_only: (:display | :filter | :sort)?
+      ?default_only: Configuration::default_only?,
+      ?default_ruby_column_only: Configuration::default_only?
     ) -> void
   end
 end

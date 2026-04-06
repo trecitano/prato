@@ -1,0 +1,9 @@
+module Prato
+  module Internal
+    module Pipeline
+      module Pagination
+        def self.paginate_query: (QueryState query_state, Configuration config, Integer? raw_page, Integer? raw_per_page) -> QueryState
+      end
+    end
+  end
+end

@@ -1,6 +1,6 @@
 module Prato
   VERSION: String
 
-  def self.table: (singleton(::ActiveRecord::Base) model) { () -> void } -> Table
-  def self.setup: () -> Configuration
+  def self.table: (singleton(::ActiveRecord::Base) base_model) { () -> void } -> Table
+  def self.setup: () ?{ (Configuration) -> void } -> Configuration
 end

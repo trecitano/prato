@@ -1,0 +1,17 @@
+module Prato
+  module Internal
+    module QueryExecutor
+      type raw_params = Hash[Symbol | String, untyped] | Query::Parameters | nil
+      type entry = Hash[Symbol, untyped]
+      type result = { entries: Array[entry], totalCount: Integer }
+
+      def self.execute: (::ActiveRecord::Relation scope, Specification spec, raw_params: raw_params, ?paginated: bool) -> result
+
+      private
+
+      def self.resolve_parameters: (raw_params input, Configuration config, Specification spec) -> Query::Parameters?
+      def self.invalid_input_result: (Configuration configuration) -> result
+      def self.total_count: (QueryState query_state) -> Integer
+    end
+  end
+end

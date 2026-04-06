@@ -1,0 +1,10 @@
+module Prato
+  module Internal
+    module ActiveRecordVersion
+      LEGACY_CUTOFF: Gem::Version
+
+      def self.version: () -> Gem::Version
+      def self.legacy?: () -> bool
+    end
+  end
+end

@@ -1,0 +1,20 @@
+module Prato
+  module Internal
+    class QueryState
+      type dataset = ::ActiveRecord::Relation | Array[::ActiveRecord::Base]
+
+      attr_reader dataset: dataset
+
+      def self.create: (::ActiveRecord::Relation base_scope, Array[Symbol] materialization_fields) -> QueryState
+
+      def unmaterialized?: () -> bool
+      def with_dataset: (dataset dataset) -> QueryState
+      def materialized_dataset: (Specification spec) -> [Array[::ActiveRecord::Base], LazyLoaderCache?]
+
+      private
+
+      def build_associations: (Array[Array[Symbol]] paths) -> Hash[Symbol, untyped]
+      def initialize: (dataset dataset, LazyLoaderCache? ruby_loaded_data, Array[Symbol] materialization_fields) -> void
+    end
+  end
+end

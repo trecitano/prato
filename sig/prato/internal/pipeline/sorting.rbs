@@ -1,0 +1,15 @@
+module Prato
+  module Internal
+    module Pipeline
+      module Sorting
+        def self.sort_query: (QueryState query_state, Specification spec, Array[Query::Sort]? raw_sorts) -> QueryState
+
+        private
+
+        def self.apply_sql_sorts: (QueryState query_state, Specification spec, Array[Query::Sort] sorts) -> QueryState
+        def self.apply_ruby_sorts: (QueryState query_state, Specification spec, Array[Query::Sort] sorts) -> QueryState
+        def self.safe_compare: (untyped a, untyped b) -> Integer
+      end
+    end
+  end
+end

@@ -1,0 +1,17 @@
+module Prato
+  module Internal
+    module Pipeline
+      module Serializer
+        type entry = Hash[Symbol, untyped]
+
+        def self.serialize_query: (QueryState query_state, Specification spec, Array[Symbol]? raw_fields) -> Array[entry]
+
+        private
+
+        def self.optimized_serialization: (QueryState query_state, Specification spec, Array[Symbol] fields) -> Array[entry]
+        def self.normal_serialization: (QueryState query_state, Specification spec, Array[Symbol] fields) -> Array[entry]
+        def self.assign_value: (entry hash, Specification spec, Symbol field, untyped value) -> untyped
+      end
+    end
+  end
+end

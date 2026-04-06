@@ -1,10 +1,10 @@
 module Prato
   module Query
     class Sort
-      attr_reader field: Symbol | Array[Symbol]
-      attr_reader order: Symbol
+      attr_reader field: Symbol?
+      attr_reader is_desc: bool
 
-      def initialize: (Symbol | Array[Symbol] field, Symbol order) -> void
+      def initialize: (Symbol? field, bool is_desc) -> void
     end
   end
 end

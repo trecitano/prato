@@ -1,9 +1,11 @@
 module Prato
   module Query
     class AndFilter
-      attr_reader filters: Array[Filter | AndFilter | OrFilter]
+      type filter_node = Filter | AndFilter | OrFilter
 
-      def initialize: (Array[Filter | AndFilter | OrFilter] filters) -> void
+      attr_reader filters: Array[filter_node]
+
+      def initialize: (Array[filter_node] filters) -> void
     end
   end
 end

@@ -8,13 +8,14 @@ module Prato
         | :contains | :not_contains
         | :between | :not_between
         | :between_exclusive | :not_between_exclusive
-      type value_type = Numeric | String | Array[Numeric | String] | nil
+      type scalar_value = nil | bool | Numeric | String | Symbol
+      type value_type = scalar_value | Array[scalar_value]
 
-      attr_reader field: Symbol | Array[Symbol]
+      attr_reader field: Symbol?
       attr_reader operator: filter_operator
       attr_reader value: value_type
 
-      def initialize: (Symbol | Array[Symbol] field, filter_operator operator, value_type value) -> void
+      def initialize: (Symbol? field, filter_operator operator, value_type value) -> void
     end
   end
 end
