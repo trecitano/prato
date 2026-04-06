@@ -17,23 +17,6 @@ module SortingComplexHelpers
 
   private
 
-  def filter(field, operator, value)
-    Prato::Query::Filter.new(field, operator, value)
-  end
-
-  def sort(field, order = :asc)
-    Prato::Query::Sort.new(field, order)
-  end
-
-  def params(filters: nil, sorts: nil, page: nil, per_page: nil)
-    Prato::Query::Parameters.new(
-      filters: filters,
-      sorts: sorts,
-      page: page,
-      per_page: per_page
-    )
-  end
-
   def names_for(table, scope: User.all, params: nil)
     table.to_table(scope, params: params)[:entries].map { |entry| entry[:name] }
   end
@@ -78,10 +61,10 @@ class TestSortingAfterRubyFiltering < Minitest::Test
       %w[Alice Carol Bob],
       names_for(
         table,
-        params: params(
-          filters: filter(:company_name, :present, nil),
-          sorts: [sort(:age, :desc)]
-        )
+        params: {
+          filters: query_filter(:company_name, :present, nil),
+          sorts: query_sort(:age, :desc)
+        }
       )
     )
   end
@@ -99,9 +82,9 @@ class TestSortingAfterRubyFiltering < Minitest::Test
       %w[Bob Alice Carol],
       names_for(
         table,
-        params: params(
-          filters: filter(:post_count, :gte, 2),
-          sorts: [sort(:company_name, :asc), sort(:name, :desc)]
+        params: query_params(
+          filters: query_filter(:post_count, :gte, 2),
+          sorts: [query_sort(:company_name, :asc), query_sort(:name, :desc)]
         )
       )
     )
@@ -120,9 +103,9 @@ class TestSortingAfterRubyFiltering < Minitest::Test
       %w[Bob Alice Carol],
       names_for(
         table,
-        params: params(
-          filters: filter(:company_name, :present, nil),
-          sorts: [sort(:company_name, :asc), sort(:age, :asc)]
+        params: query_params(
+          filters: query_filter(:company_name, :present, nil),
+          sorts: [query_sort(:company_name, :asc), query_sort(:age, :asc)]
         )
       )
     )
@@ -139,14 +122,14 @@ class TestSortingAfterRubyFiltering < Minitest::Test
 
     result = table.to_table(
       User.all,
-      params: params(
-        filters: filter(:company_name, :present, nil),
-        sorts: [sort(:age_plus_ten, :asc), sort(:company_name, :desc), sort(:name, :asc)]
+      params: query_params(
+        filters: query_filter(:company_name, :present, nil),
+        sorts: [query_sort(:age_plus_ten, :asc), query_sort(:company_name, :desc), query_sort(:name, :asc)]
       )
     )
 
     assert_equal(%w[Bob Carol Alice], result[:entries].map { |entry| entry[:name] })
-    assert(result[:entries].all? { |entry| entry.keys == [:name, :companyName] })
+    assert(result[:entries].all? { |entry| entry.keys == %i[name companyName] })
   end
 
   def test_query_only_aggregate_sort_remains_available_after_ruby_filter_materializes_records
@@ -160,14 +143,14 @@ class TestSortingAfterRubyFiltering < Minitest::Test
 
     result = table.to_table(
       User.all,
-      params: params(
-        filters: filter(:company_name, :present, nil),
-        sorts: [sort(:post_count_sql, :asc), sort(:company_name, :desc), sort(:name, :asc)]
+      params: query_params(
+        filters: query_filter(:company_name, :present, nil),
+        sorts: [query_sort(:post_count_sql, :asc), query_sort(:company_name, :desc), query_sort(:name, :asc)]
       )
     )
 
     assert_equal(%w[Bob Carol Alice], result[:entries].map { |entry| entry[:name] })
-    assert(result[:entries].all? { |entry| entry.keys == [:name, :companyName] })
+    assert(result[:entries].all? { |entry| entry.keys == %i[name companyName] })
   end
 end
 
@@ -194,10 +177,10 @@ class TestSortingComplexSections < Minitest::Test
       names_for(
         table,
         params: {
-          filters: [{ field: "computed.post_count", operator: "gte", value: 2 }],
+          filters: [{ field: "computed.postCount", operator: "gte", value: 2 }],
           sorts: [
-            { field: "profile.company_name", direction: "asc" },
-            { field: "name", direction: "desc" }
+            { field: "profile.companyName", order: "asc" },
+            { field: "name", order: "desc" }
           ]
         }
       )
@@ -224,8 +207,8 @@ class TestSortingComplexSections < Minitest::Test
       names_for(
         table,
         params: {
-          filters: [{ field: "computed.company_name", operator: "present", value: nil }],
-          sorts: [{ field: "stats.post_count", direction: "asc" }]
+          filters: [{ field: "computed.companyName", operator: "present", value: nil }],
+          sorts: [{ field: "stats.postCount", order: "asc" }]
         }
       )
     )
@@ -242,15 +225,16 @@ class TestSortingHasManyQueryColumns < Minitest::Test
     end
     titles, result = titles_for(
       table,
-      params: params(
+      params: query_params(
         page: 1,
         per_page: 20,
-        sorts: [sort(:tag_name, :asc), sort(:title, :asc)]
+        sorts: [query_sort(:tag_name, :asc), query_sort(:title, :asc)]
       ),
       paginated: true
     )
     assert_equal(
-      ["Draft", "Finance tips", "Hello", "Hello", "Learning Rails", "Market update", "More Ruby", "Ruby tips", "Unpublished", "Young dev"],
+      ["Draft", "Finance tips", "Hello", "Hello", "Learning Rails", "Market update", "More Ruby", "Ruby tips",
+       "Unpublished", "Young dev"],
       titles.sort
     )
     assert_equal 10, titles.length

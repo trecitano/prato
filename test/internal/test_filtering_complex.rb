@@ -211,16 +211,8 @@ module FilteringComplexHelpers
     end
   end
 
-  def filter(field, operator, value)
-    Prato::Query::Filter.new(resolve_field(field), operator, value)
-  end
-
   def result_for(table, filters)
-    table.to_table(Comment.order(:id), params: Prato::Query::Parameters.new(filters: filters))
-  end
-
-  def resolve_field(field)
-    field.is_a?(Array) ? Prato::Query::FieldResolver.join(field) : field
+    table.to_table(Comment.order(:id), params: query_params(filters: filters))
   end
 
   def all_comment_bodies
@@ -270,10 +262,10 @@ class TestFilteringEdgeCases < Minitest::Test
   end
 
   def test_duplicate_company_associations_can_be_filtered_independently
-    filters = Prato::Query::AndFilter.new([
-                                            filter(:user_company_name, :eq, "Acme Corp"),
-                                            filter(:post_author_company_name, :eq, "Acme Corp")
-                                          ])
+    filters = query_and(
+      query_filter(:user_company_name, :eq, "Acme Corp"),
+      query_filter(:post_author_company_name, :eq, "Acme Corp")
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -290,11 +282,11 @@ class TestFilteringEdgeCases < Minitest::Test
   end
 
   def test_self_referential_category_filters_do_not_cross_match_terminal_aliases
-    filters = Prato::Query::AndFilter.new([
-                                            filter(:post_author_name, :eq, "Alice"),
-                                            filter(:post_category, :eq, "Ruby"),
-                                            filter(:post_parent_category, :eq, "Technology")
-                                          ])
+    filters = query_and(
+      query_filter(:post_author_name, :eq, "Alice"),
+      query_filter(:post_category, :eq, "Ruby"),
+      query_filter(:post_parent_category, :eq, "Technology")
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -311,10 +303,10 @@ class TestFilteringEdgeCases < Minitest::Test
   end
 
   def test_comment_author_and_post_author_stay_distinct_inside_or_filters
-    filters = Prato::Query::OrFilter.new([
-                                           filter(:author_name, :eq, "Alice"),
-                                           filter(:post_author_name, :eq, "Alice")
-                                         ])
+    filters = query_or(
+      query_filter(:author_name, :eq, "Alice"),
+      query_filter(:post_author_name, :eq, "Alice")
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -346,8 +338,8 @@ class TestFilteringEdgeCases < Minitest::Test
       not_in: ["Technology"],
       not_contains: "Tech"
     }.each do |operator, value|
-      sql_result = result_for(@table, filter(:post_parent_category, operator, value))
-      ruby_result = result_for(ruby_table, filter(:parent_category_name_ruby, operator, value))
+      sql_result = result_for(@table, query_filter(:post_parent_category, operator, value))
+      ruby_result = result_for(ruby_table, query_filter(:parent_category_name_ruby, operator, value))
 
       assert_comment_bodies(sql_result, comments_without_parent_category_bodies)
       assert_comment_bodies(ruby_result, comments_without_parent_category_bodies)
@@ -361,7 +353,7 @@ class TestFilteringEdgeCases < Minitest::Test
       not_contains: "Tech"
     }.each do |operator, value|
       assert_comment_bodies(
-        result_for(@table, filter(:post_parent_category, operator, value)),
+        result_for(@table, query_filter(:post_parent_category, operator, value)),
         comments_without_parent_category_bodies
       )
     end
@@ -375,8 +367,8 @@ class TestFilteringEdgeCases < Minitest::Test
       not_in: [nil],
       not_contains: nil
     }.each do |operator, value|
-      sql_result = result_for(@table, filter(:post_parent_category, operator, value))
-      ruby_result = result_for(ruby_table, filter(:parent_category_name_ruby, operator, value))
+      sql_result = result_for(@table, query_filter(:post_parent_category, operator, value))
+      ruby_result = result_for(ruby_table, query_filter(:parent_category_name_ruby, operator, value))
 
       assert_equal comment_bodies(ruby_result), comment_bodies(sql_result),
                    "expected #{operator.inspect} with #{value.inspect} to match ruby mirror semantics"
@@ -393,18 +385,16 @@ class TestFilteringComplexCases < Minitest::Test
   end
 
   def test_sectioned_fields_support_mixed_nested_filters
-    filters = Prato::Query::OrFilter.new([
-                                           Prato::Query::AndFilter.new([
-                                                                         filter(%i[commenter name], :eq, "Alice"),
-                                                                         filter(%i[post_info category parent name],
-                                                                                :not_present, nil)
-                                                                       ]),
-                                           Prato::Query::AndFilter.new([
-                                                                         filter(%i[post_info author name], :eq,
-                                                                                "Alice"),
-                                                                         filter(%i[computed body_length], :gte, 13)
-                                                                       ])
-                                         ])
+    filters = query_or(
+      query_and(
+        query_filter(%i[commenter name], :eq, "Alice"),
+        query_filter(%i[post_info category parent name], :not_present, nil)
+      ),
+      query_and(
+        query_filter(%i[post_info author name], :eq, "Alice"),
+        query_filter(%i[computed body_length], :gte, 13)
+      )
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -422,11 +412,11 @@ class TestFilteringComplexCases < Minitest::Test
   end
 
   def test_sectioned_filters_handle_duplicate_category_names_in_the_same_tree
-    filters = Prato::Query::AndFilter.new([
-                                            filter(%i[commenter name], :in, %w[Bob Dave]),
-                                            filter(%i[post_info category name], :eq, "Ruby"),
-                                            filter(%i[post_info category parent name], :eq, "Technology")
-                                          ])
+    filters = query_and(
+      query_filter(%i[commenter name], :in, %w[Bob Dave]),
+      query_filter(%i[post_info category name], :eq, "Ruby"),
+      query_filter(%i[post_info category parent name], :eq, "Technology")
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -443,7 +433,7 @@ class TestFilteringComplexCases < Minitest::Test
 
   def test_invalid_operator_raises_when_invalid_input_is_configured_to_raise
     assert_raises(ArgumentError) do
-      result_for(@table, filter(:score, :bogus, 3))
+      result_for(@table, query_filter(:score, :bogus, 3))
     end
   end
 end
@@ -471,20 +461,16 @@ class TestFilteringSqlAndOperator < Minitest::Test
   end
 
   def test_deep_and_filter_handles_duplicate_association_targets
-    filters = Prato::Query::AndFilter.new([
-                                            filter(:user_company_name, :eq, "Acme Corp"),
-                                            Prato::Query::AndFilter.new([
-                                                                          filter(:post_author_company_name, :eq,
-                                                                                 "Acme Corp"),
-                                                                          Prato::Query::AndFilter.new([
-                                                                                                        filter(
-                                                                                                          :post_category, :eq, "Ruby"
-                                                                                                        ),
-                                                                                                        filter(:post_parent_category, :eq,
-                                                                                                               "Technology")
-                                                                                                      ])
-                                                                        ])
-                                          ])
+    filters = query_and(
+      query_filter(:user_company_name, :eq, "Acme Corp"),
+      query_and(
+        query_filter(:post_author_company_name, :eq, "Acme Corp"),
+        query_and(
+          query_filter(:post_category, :eq, "Ruby"),
+          query_filter(:post_parent_category, :eq, "Technology")
+        )
+      )
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -498,28 +484,25 @@ class TestFilteringSqlAndOperator < Minitest::Test
   end
 
   def test_deep_and_filter_can_mix_sql_associations_aggregates_and_expressions
-    filters = Prato::Query::AndFilter.new([
-                                            filter(:score_doubled, :gte, 8),
-                                            Prato::Query::AndFilter.new([
-                                                                          filter(:post_comment_count, :gte, 4),
-                                                                          Prato::Query::AndFilter.new([
-                                                                                                        filter(
-                                                                                                          :post_author_name, :eq, "Bob"
-                                                                                                        ),
-                                                                                                        filter(:post_category, :in,
-                                                                                                               %w[Technology Ruby])
-                                                                                                      ])
-                                                                        ])
-                                          ])
+    filters = query_and(
+      query_filter(:score_doubled, :gte, 8),
+      query_and(
+        query_filter(:post_comment_count, :gte, 4),
+        query_and(
+          query_filter(:post_author_name, :eq, "Bob"),
+          query_filter(:post_category, :in, %w[Technology Ruby])
+        )
+      )
+    )
 
     assert_comment_bodies(result_for(@table, filters), ["Agreed", "Keep going!"])
   end
 
   def test_and_filter_with_not_eq_nil_on_optional_association
-    filters = Prato::Query::AndFilter.new([
-                                            filter(:post_parent_category, :not_eq, nil),
-                                            filter(:author_name, :eq, "Bob")
-                                          ])
+    filters = query_and(
+      query_filter(:post_parent_category, :not_eq, nil),
+      query_filter(:author_name, :eq, "Bob")
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -528,10 +511,10 @@ class TestFilteringSqlAndOperator < Minitest::Test
   end
 
   def test_and_filter_with_eq_nil_on_optional_association
-    filters = Prato::Query::AndFilter.new([
-                                            filter(:post_parent_category, :eq, nil),
-                                            filter(:author_name, :eq, "Alice")
-                                          ])
+    filters = query_and(
+      query_filter(:post_parent_category, :eq, nil),
+      query_filter(:author_name, :eq, "Alice")
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -563,16 +546,12 @@ class TestFilteringSqlOrOperator < Minitest::Test
   end
 
   def test_deep_or_filter_keeps_comment_and_post_author_paths_separate
-    filters = Prato::Query::OrFilter.new(
-      [
-        filter(:post_author_name, :eq, "Carol"),
-        Prato::Query::OrFilter.new(
-          [
-            filter(:author_name, :eq, "Dave"),
-            filter(:post_title, :eq, "Hello")
-          ]
-        )
-      ]
+    filters = query_or(
+      query_filter(:post_author_name, :eq, "Carol"),
+      query_or(
+        query_filter(:author_name, :eq, "Dave"),
+        query_filter(:post_title, :eq, "Hello")
+      )
     )
 
     assert_comment_bodies(
@@ -596,13 +575,13 @@ class TestFilteringSqlOrOperator < Minitest::Test
   end
 
   def test_deep_or_filter_can_mix_sql_associations_aggregates_and_expressions
-    filters = Prato::Query::OrFilter.new([
-                                           filter(:score_doubled, :gte, 10),
-                                           Prato::Query::OrFilter.new([
-                                                                        filter(:post_comment_count, :eq, 2),
-                                                                        filter(:post_author_name, :eq, "Alice")
-                                                                      ])
-                                         ])
+    filters = query_or(
+      query_filter(:score_doubled, :gte, 10),
+      query_or(
+        query_filter(:post_comment_count, :eq, 2),
+        query_filter(:post_author_name, :eq, "Alice")
+      )
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -626,14 +605,13 @@ class TestFilteringSqlOrOperator < Minitest::Test
   end
 
   def test_deep_or_filter_keeps_nil_rows_when_not_present_branch_is_nested
-    filters = Prato::Query::OrFilter.new([
-                                           filter(:post_parent_category, :eq, "Technology"),
-                                           Prato::Query::OrFilter.new([
-                                                                        filter(:post_parent_category, :not_present,
-                                                                               nil),
-                                                                        filter(:post_title, :eq, "No such title")
-                                                                      ])
-                                         ])
+    filters = query_or(
+      query_filter(:post_parent_category, :eq, "Technology"),
+      query_or(
+        query_filter(:post_parent_category, :not_present, nil),
+        query_filter(:post_title, :eq, "No such title")
+      )
+    )
 
     assert_comment_bodies(result_for(@table, filters), all_comment_bodies)
   end
@@ -644,20 +622,20 @@ class TestFilteringSqlOrOperator < Minitest::Test
       not_in: ["Technology"],
       not_contains: "Tech"
     }.each do |operator, value|
-      filters = Prato::Query::OrFilter.new([
-                                             filter(:post_parent_category, operator, value),
-                                             filter(:post_title, :eq, "No such title")
-                                           ])
+      filters = query_or(
+        query_filter(:post_parent_category, operator, value),
+        query_filter(:post_title, :eq, "No such title")
+      )
 
       assert_comment_bodies(result_for(@table, filters), comments_without_parent_category_bodies)
     end
   end
 
   def test_or_filter_with_not_eq_nil_on_optional_association_matches_present_semantics
-    filters = Prato::Query::OrFilter.new([
-                                           filter(:post_parent_category, :not_eq, nil),
-                                           filter(:post_title, :eq, "No such title")
-                                         ])
+    filters = query_or(
+      query_filter(:post_parent_category, :not_eq, nil),
+      query_filter(:post_title, :eq, "No such title")
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -667,10 +645,10 @@ class TestFilteringSqlOrOperator < Minitest::Test
   end
 
   def test_or_filter_with_eq_nil_on_optional_association_matches_not_present_semantics
-    filters = Prato::Query::OrFilter.new([
-                                           filter(:post_parent_category, :eq, nil),
-                                           filter(:post_title, :eq, "No such title")
-                                         ])
+    filters = query_or(
+      query_filter(:post_parent_category, :eq, nil),
+      query_filter(:post_title, :eq, "No such title")
+    )
 
     assert_comment_bodies(result_for(@table, filters), comments_without_parent_category_bodies)
   end
@@ -685,20 +663,16 @@ class TestFilteringRubyAndOperator < Minitest::Test
   end
 
   def test_deep_and_filter_handles_weird_associations_using_only_ruby_columns
-    filters = Prato::Query::AndFilter.new([
-                                            filter(:commenter_company, :eq, "Acme Corp"),
-                                            Prato::Query::AndFilter.new([
-                                                                          filter(:post_author_company, :eq,
-                                                                                 "Acme Corp"),
-                                                                          Prato::Query::AndFilter.new([
-                                                                                                        filter(
-                                                                                                          :category_name_ruby, :eq, "Ruby"
-                                                                                                        ),
-                                                                                                        filter(:parent_category_name_ruby, :eq,
-                                                                                                               "Technology")
-                                                                                                      ])
-                                                                        ])
-                                          ])
+    filters = query_and(
+      query_filter(:commenter_company, :eq, "Acme Corp"),
+      query_and(
+        query_filter(:post_author_company, :eq, "Acme Corp"),
+        query_and(
+          query_filter(:category_name_ruby, :eq, "Ruby"),
+          query_filter(:parent_category_name_ruby, :eq, "Technology")
+        )
+      )
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -712,18 +686,16 @@ class TestFilteringRubyAndOperator < Minitest::Test
   end
 
   def test_deep_and_filter_can_stack_multiple_ruby_predicates
-    filters = Prato::Query::AndFilter.new([
-                                            filter(:body_upcase, :contains, "GOOD"),
-                                            Prato::Query::AndFilter.new([
-                                                                          filter(:body_length, :between, [9, 11]),
-                                                                          Prato::Query::AndFilter.new([
-                                                                                                        filter(:category_name_ruby, :eq,
-                                                                                                               "Technology"),
-                                                                                                        filter(:parent_category_name_ruby,
-                                                                                                               :not_present, nil)
-                                                                                                      ])
-                                                                        ])
-                                          ])
+    filters = query_and(
+      query_filter(:body_upcase, :contains, "GOOD"),
+      query_and(
+        query_filter(:body_length, :between, [9, 11]),
+        query_and(
+          query_filter(:category_name_ruby, :eq, "Technology"),
+          query_filter(:parent_category_name_ruby, :not_present, nil)
+        )
+      )
+    )
 
     assert_comment_bodies(result_for(@table, filters), ["Good tip!"])
   end
@@ -738,13 +710,13 @@ class TestFilteringRubyOrOperator < Minitest::Test
   end
 
   def test_deep_or_filter_handles_nil_and_nested_association_ruby_columns
-    filters = Prato::Query::OrFilter.new([
-                                           filter(:parent_category_name_ruby, :eq, "Technology"),
-                                           Prato::Query::OrFilter.new([
-                                                                        filter(:commenter_company, :not_present, nil),
-                                                                        filter(:body_upcase, :contains, "PUMA")
-                                                                      ])
-                                         ])
+    filters = query_or(
+      query_filter(:parent_category_name_ruby, :eq, "Technology"),
+      query_or(
+        query_filter(:commenter_company, :not_present, nil),
+        query_filter(:body_upcase, :contains, "PUMA")
+      )
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -766,13 +738,13 @@ class TestFilteringRubyOrOperator < Minitest::Test
   end
 
   def test_deep_or_filter_can_union_multiple_weird_ruby_branches
-    filters = Prato::Query::OrFilter.new([
-                                           filter(:commenter_company, :eq, "Globex"),
-                                           Prato::Query::OrFilter.new([
-                                                                        filter(:post_author_company, :eq, "Globex"),
-                                                                        filter(:body_length, :eq, 6)
-                                                                      ])
-                                         ])
+    filters = query_or(
+      query_filter(:commenter_company, :eq, "Globex"),
+      query_or(
+        query_filter(:post_author_company, :eq, "Globex"),
+        query_filter(:body_length, :eq, 6)
+      )
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -803,24 +775,20 @@ class TestFilteringAll < Minitest::Test
   end
 
   def test_complex_filter_can_mix_sql_and_ruby_inside_nested_or_branches
-    filters = Prato::Query::OrFilter.new([
-                                           Prato::Query::AndFilter.new([
-                                                                         filter(:post_parent_category, :eq,
-                                                                                "Technology"),
-                                                                         filter(:commenter_company, :eq, "Acme Corp"),
-                                                                         filter(:body_upcase, :contains, "PUMA")
-                                                                       ]),
-                                           Prato::Query::AndFilter.new([
-                                                                         filter(:post_author_name, :eq, "Carol"),
-                                                                         Prato::Query::OrFilter.new([
-                                                                                                      filter(
-                                                                                                        :body_length, :gte, 16
-                                                                                                      ),
-                                                                                                      filter(:score,
-                                                                                                             :eq, 5)
-                                                                                                    ])
-                                                                       ])
-                                         ])
+    filters = query_or(
+      query_and(
+        query_filter(:post_parent_category, :eq, "Technology"),
+        query_filter(:commenter_company, :eq, "Acme Corp"),
+        query_filter(:body_upcase, :contains, "PUMA")
+      ),
+      query_and(
+        query_filter(:post_author_name, :eq, "Carol"),
+        query_or(
+          query_filter(:body_length, :gte, 16),
+          query_filter(:score, :eq, 5)
+        )
+      )
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -836,17 +804,17 @@ class TestFilteringAll < Minitest::Test
   end
 
   def test_complex_filter_can_mix_sql_and_ruby_inside_nested_and_branches
-    filters = Prato::Query::AndFilter.new([
-                                            Prato::Query::OrFilter.new([
-                                                                         filter(:post_category, :eq, "General"),
-                                                                         filter(:body_starts_with_g, :present, nil)
-                                                                       ]),
-                                            Prato::Query::OrFilter.new([
-                                                                         filter(:author_name, :eq, "Alice"),
-                                                                         filter(:commenter_company, :not_present, nil)
-                                                                       ]),
-                                            filter(:body_length, :gte, 8)
-                                          ])
+    filters = query_and(
+      query_or(
+        query_filter(:post_category, :eq, "General"),
+        query_filter(:body_starts_with_g, :present, nil)
+      ),
+      query_or(
+        query_filter(:author_name, :eq, "Alice"),
+        query_filter(:commenter_company, :not_present, nil)
+      ),
+      query_filter(:body_length, :gte, 8)
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -862,16 +830,16 @@ class TestFilteringAll < Minitest::Test
   end
 
   def test_complex_filter_can_use_filter_only_expression_columns_inside_mixed_or_filters
-    filters = Prato::Query::OrFilter.new([
-                                           Prato::Query::AndFilter.new([
-                                                                         filter(:score_filter_only, :gte, 5),
-                                                                         filter(:score, :gte, 5)
-                                                                       ]),
-                                           Prato::Query::AndFilter.new([
-                                                                         filter(:body_upcase, :contains, "PUMA"),
-                                                                         filter(:body_length, :gte, 12)
-                                                                       ])
-                                         ])
+    filters = query_or(
+      query_and(
+        query_filter(:score_filter_only, :gte, 5),
+        query_filter(:score, :gte, 5)
+      ),
+      query_and(
+        query_filter(:body_upcase, :contains, "PUMA"),
+        query_filter(:body_length, :gte, 12)
+      )
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -880,17 +848,16 @@ class TestFilteringAll < Minitest::Test
   end
 
   def test_complex_filter_can_use_filter_only_aggregate_columns_inside_mixed_or_filters
-    filters = Prato::Query::OrFilter.new([
-                                           Prato::Query::AndFilter.new([
-                                                                         filter(:post_comment_count_filter_only, :eq,
-                                                                                2),
-                                                                         filter(:body_length, :gte, 9)
-                                                                       ]),
-                                           Prato::Query::AndFilter.new([
-                                                                         filter(:body_starts_with_g, :present, nil),
-                                                                         filter(:body_upcase, :contains, "GOOD")
-                                                                       ])
-                                         ])
+    filters = query_or(
+      query_and(
+        query_filter(:post_comment_count_filter_only, :eq, 2),
+        query_filter(:body_length, :gte, 9)
+      ),
+      query_and(
+        query_filter(:body_starts_with_g, :present, nil),
+        query_filter(:body_upcase, :contains, "GOOD")
+      )
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -899,36 +866,36 @@ class TestFilteringAll < Minitest::Test
   end
 
   def test_mixed_and_filter_preserves_contains_semantics_for_sql_columns
-    pure_sql_result = result_for(@table, filter(:post_parent_category, :contains, "tech"))
+    pure_sql_result = result_for(@table, query_filter(:post_parent_category, :contains, "tech"))
     mixed_result = result_for(
       @table,
-      Prato::Query::AndFilter.new([
-                                    filter(:post_parent_category, :contains, "tech"),
-                                    filter(:body_length, :gte, 0)
-                                  ])
+      query_and(
+        query_filter(:post_parent_category, :contains, "tech"),
+        query_filter(:body_length, :gte, 0)
+      )
     )
 
     assert_equal comment_bodies(pure_sql_result), comment_bodies(mixed_result)
   end
 
   def test_mixed_and_filter_preserves_negative_nil_semantics_for_sql_columns
-    pure_sql_result = result_for(@table, filter(:post_parent_category, :not_eq, nil))
+    pure_sql_result = result_for(@table, query_filter(:post_parent_category, :not_eq, nil))
     mixed_result = result_for(
       @table,
-      Prato::Query::AndFilter.new([
-                                    filter(:post_parent_category, :not_eq, nil),
-                                    filter(:body_length, :gte, 0)
-                                  ])
+      query_and(
+        query_filter(:post_parent_category, :not_eq, nil),
+        query_filter(:body_length, :gte, 0)
+      )
     )
 
     assert_equal comment_bodies(pure_sql_result), comment_bodies(mixed_result)
   end
 
   def test_mixed_and_filter_with_not_eq_nil_combined_with_ruby_column
-    filters = Prato::Query::AndFilter.new([
-                                            filter(:post_parent_category, :not_eq, nil),
-                                            filter(:body_length, :gte, 12)
-                                          ])
+    filters = query_and(
+      query_filter(:post_parent_category, :not_eq, nil),
+      query_filter(:body_length, :gte, 12)
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),
@@ -937,10 +904,10 @@ class TestFilteringAll < Minitest::Test
   end
 
   def test_mixed_or_filter_with_eq_nil_combined_with_ruby_column
-    filters = Prato::Query::OrFilter.new([
-                                           filter(:post_parent_category, :eq, nil),
-                                           filter(:body_starts_with_g, :present, nil)
-                                         ])
+    filters = query_or(
+      query_filter(:post_parent_category, :eq, nil),
+      query_filter(:body_starts_with_g, :present, nil)
+    )
 
     assert_comment_bodies(
       result_for(@table, filters),

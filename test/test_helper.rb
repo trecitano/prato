@@ -23,6 +23,70 @@ def transform_hash_values(hash)
   end
 end
 
+module QueryInputHelpers
+  private
+
+  def query_field_path(field, *rest)
+    [field, *rest].flatten
+                  .flat_map { |part| part.to_s.split(".") }
+                  .map { |part| query_key_part(part) }
+                  .join(".")
+  end
+
+  def query_fields(*fields)
+    fields.flatten.map { |field| query_field_path(field) }
+  end
+
+  def query_filter(field, operator, value)
+    {
+      field: query_field_path(field),
+      operator: operator.to_s,
+      value: value
+    }
+  end
+
+  def query_sort(field, order = :asc)
+    {
+      field: query_field_path(field),
+      order: order.to_s
+    }
+  end
+
+  def query_and(*filters)
+    { and: filters.flatten }
+  end
+
+  def query_or(*filters)
+    { or: filters.flatten }
+  end
+
+  def query_params(page: nil, per_page: nil, fields: nil, filters: nil, sorts: nil, **options)
+    {}.tap do |params|
+      params[:page] = page unless page.nil?
+      params[:per_page] = per_page unless per_page.nil?
+      params[:fields] = query_fields(fields) unless fields.nil?
+      params[:filters] = filters unless filters.nil?
+      params[:sorts] = Array(sorts) unless sorts.nil?
+
+      options.each do |key, value|
+        params[key] = value unless value.nil?
+      end
+    end
+  end
+
+  def query_key_part(part)
+    value = part.to_s
+    return value if value.match?(/[A-Z]/) || !value.include?("_")
+
+    head, *tail = value.split("_")
+    head + tail.map(&:capitalize).join
+  end
+end
+
+class Minitest::Test
+  include QueryInputHelpers
+end
+
 def query_logs_supported?
   defined?(ActiveRecord::QueryLogs) && ActiveRecord::QueryLogs.respond_to?(:taggings=)
 end

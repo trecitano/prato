@@ -168,7 +168,7 @@ class TestApiSectionQuerying < Minitest::Test
     result = table.to_table(
       User.order(:id),
       params: {
-        filters: [{ field: "profile.company_name", operator: "eq", value: "Acme Corp" }]
+        filters: [{ field: "profile.companyName", operator: "eq", value: "Acme Corp" }]
       }
     )
 
@@ -190,7 +190,7 @@ class TestApiSectionQuerying < Minitest::Test
       names_for(
         table,
         params: {
-          sorts: [{ field: "profile.age", direction: "desc" }]
+          sorts: [{ field: "profile.age", order: "desc" }]
         }
       )
     )
@@ -223,8 +223,8 @@ class TestApiSectionQuerying < Minitest::Test
         table,
         params: {
           sorts: [
-            { field: "post_info.author.name", direction: "asc" },
-            { field: "title", direction: "asc" }
+            { field: "postInfo.author.name", order: "asc" },
+            { field: "title", order: "asc" }
           ]
         }
       )
@@ -245,7 +245,7 @@ class TestApiSectionQuerying < Minitest::Test
       names_for(
         table,
         params: {
-          sorts: [{ field: "computed.age_plus_ten", direction: "desc" }]
+          sorts: [{ field: "computed.agePlusTen", order: "desc" }]
         }
       )
     )
@@ -265,7 +265,7 @@ class TestApiSectionQuerying < Minitest::Test
       names_for(
         table,
         params: {
-          sorts: [{ field: "stats.post_count", direction: "desc" }]
+          sorts: [{ field: "stats.postCount", order: "desc" }]
         }
       )
     )
@@ -288,7 +288,7 @@ class TestApiSectionQuerying < Minitest::Test
       names_for(
         table,
         params: {
-          sorts: [{ field: "computed.post_count", direction: "desc" }]
+          sorts: [{ field: "computed.postCount", order: "desc" }]
         }
       )
     )
@@ -311,8 +311,8 @@ class TestApiSectionQuerying < Minitest::Test
         table,
         params: {
           sorts: [
-            { field: "computed.company_name", direction: "desc" },
-            { field: "name", direction: "asc" }
+            { field: "computed.companyName", order: "desc" },
+            { field: "name", order: "asc" }
           ]
         }
       )

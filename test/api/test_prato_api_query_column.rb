@@ -2,21 +2,7 @@
 
 require "test_helper"
 
-module TestPratoApiQueryColumn
-  private
-
-  def filter(field, operator, value)
-    Prato::Query::Filter.new(field, operator, value)
-  end
-
-  def params_with_filter(field, operator, value, **options)
-    Prato::Query::Parameters.new(**options, filters: filter(field, operator, value))
-  end
-end
-
 class TestApiQueryColumnFiltering < Minitest::Test
-  include TestPratoApiQueryColumn
-
   def test_query_column_can_filter_without_serializing_query_only_field
     table = Prato.table(Post) do
       column(:title)
@@ -25,7 +11,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
 
     result = table.to_table(
       Post.order(:id),
-      params: params_with_filter(:author_name, :eq, "Alice")
+      params: query_params(filters: query_filter(:author_name, :eq, "Alice"))
     )
 
     assert_equal(["Hello", "Draft", "Ruby tips", "More Ruby"], result[:entries].map { |entry| entry[:title] })
@@ -40,7 +26,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
 
     result = table.to_page(
       Post.order(:id),
-      params: params_with_filter(:tag_name, :in, %w[rails ruby], page: 1, per_page: 10)
+      params: query_params(page: 1, per_page: 10, filters: query_filter(:tag_name, :in, %w[rails ruby]))
     )
 
     assert_equal ["Hello", "Hello", "Young dev"], result[:entries].map { |entry| entry[:title] }.sort
@@ -57,13 +43,13 @@ class TestApiQueryColumnFiltering < Minitest::Test
 
     result = table.to_page(
       Post.order(:id),
-      params: Prato::Query::Parameters.new(
+      params: query_params(
         page: 1,
         per_page: 10,
-        filters: Prato::Query::OrFilter.new([
-          filter(:tag_name, :eq, "rails"),
-          filter(:tag_name, :eq, "ruby")
-        ])
+        filters: query_or(
+          query_filter(:tag_name, :eq, "rails"),
+          query_filter(:tag_name, :eq, "ruby")
+        )
       )
     )
 
@@ -73,8 +59,6 @@ class TestApiQueryColumnFiltering < Minitest::Test
 end
 
 class TestApiDisplayOnlyColumnFiltering < Minitest::Test
-  include TestPratoApiQueryColumn
-
   def test_filtering_on_display_only_column_returns_empty_result_by_default
     table = Prato.table(User) do
       column(:name, only: :display)
@@ -82,7 +66,7 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
 
     result = table.to_table(
       User.order(:id),
-      params: params_with_filter(:name, :eq, "Alice")
+      params: query_params(filters: query_filter(:name, :eq, "Alice"))
     )
 
     assert_equal [], result[:entries]
@@ -98,7 +82,7 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
     assert_raises(ArgumentError) do
       table.to_table(
         User.order(:id),
-        params: params_with_filter(:name, :eq, "Alice")
+        params: query_params(filters: query_filter(:name, :eq, "Alice"))
       )
     end
   end

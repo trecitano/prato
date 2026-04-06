@@ -5,22 +5,6 @@ require "test_helper"
 module TestDisplayFields
   private
 
-  def field(*parts)
-    Prato::Query::FieldResolver.join(parts)
-  end
-
-  def filter(field_name, operator, value)
-    Prato::Query::Filter.new(field_name, operator, value)
-  end
-
-  def sort(field_name, order = :asc)
-    Prato::Query::Sort.new(field_name, order)
-  end
-
-  def query_params(fields: nil, filters: nil, sorts: nil)
-    Prato::Query::Parameters.new(fields: fields, filters: filters, sorts: sorts)
-  end
-
   def alice_entry(table, params: nil)
     table.to_table(User.where(name: "Alice"), params: params)[:entries].first
   end
@@ -84,8 +68,8 @@ class TestDisplayFieldsSelection < Minitest::Test
     result = table.to_table(
       User.all,
       params: query_params(
-        fields: [field(:name), field(:age_plus_ten), field(:post_count)],
-        filters: filter(field(:name_upcase), :eq, "ALICE")
+        fields: [query_field_path(:name), query_field_path(:age_plus_ten), query_field_path(:post_count)],
+        filters: query_filter(:name_upcase, :eq, "ALICE")
       )
     )
 
@@ -107,8 +91,8 @@ class TestDisplayFieldsSelection < Minitest::Test
     result = table.to_table(
       User.order(:id),
       params: query_params(
-        fields: [field(:name), field(:age_plus_ten)],
-        sorts: [sort(field(:name_upcase), :asc)]
+        fields: [query_field_path(:name), query_field_path(:age_plus_ten)],
+        sorts: [query_sort(:name_upcase, :asc)]
       )
     )
 
@@ -129,8 +113,9 @@ class TestDisplayFieldsSelection < Minitest::Test
     result = table.to_table(
       User.all,
       params: query_params(
-        fields: [field(:name), field(:profile, :age_plus_ten), field(:profile, :post_count)],
-        filters: filter(field(:profile, :name_upcase), :eq, "ALICE")
+        fields: [query_field_path(:name), query_field_path(:profile, :age_plus_ten),
+                 query_field_path(:profile, :post_count)],
+        filters: query_filter(%i[profile name_upcase], :eq, "ALICE")
       )
     )
 
@@ -179,7 +164,7 @@ class TestDisplayFieldsValidation < Minitest::Test
 
     result = table.to_table(
       Post.order(:id),
-      params: query_params(fields: [field(:title), field(:author_name)])
+      params: query_params(fields: [query_field_path(:title), query_field_path(:author_name)])
     )
 
     assert_equal [], result[:entries]
@@ -196,7 +181,7 @@ class TestDisplayFieldsValidation < Minitest::Test
     assert_raises(ArgumentError) do
       table.to_table(
         Post.order(:id),
-        params: query_params(fields: [field(:title), field(:author_name)])
+        params: query_params(fields: [query_field_path(:title), query_field_path(:author_name)])
       )
     end
   end
@@ -208,7 +193,7 @@ class TestDisplayFieldsValidation < Minitest::Test
 
     result = table.to_table(
       User.order(:id),
-      params: query_params(fields: [field(:name), field(:unknown_field)])
+      params: query_params(fields: [query_field_path(:name), query_field_path(:unknown_field)])
     )
 
     assert_equal [], result[:entries]

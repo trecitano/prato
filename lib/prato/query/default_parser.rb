@@ -33,23 +33,22 @@ module Prato
         return nil if input.nil?
 
         entries = normalize_entries_to_hash(input)
-        parse_filter_entries(entries, field_lookup)
+        filters = parse_filter_entries(entries, field_lookup)
+        filters.nil? || filters.empty? ? nil : filters
       end
 
       def parse_filter_entries(entries, field_lookup, depth = 0)
-        if depth == 10
-          raise ArgumentError, "Filter nesting too deep (maximum depth: 10)"
-        end
+        raise ArgumentError, "Filter nesting too deep (maximum depth: 10)" if depth == 10
 
-        Array(entries).map do |entry|
+        Array.wrap(entries).filter_map do |entry|
           if hash_access(entry, "or")
             nested = parse_filter_entries(hash_access(entry, "or"), field_lookup, depth + 1)
-            return nil if nested.empty?
+            next if nested.nil? || nested.empty?
 
             Prato::Query::OrFilter.new(nested)
           elsif hash_access(entry, "and")
             nested = parse_filter_entries(hash_access(entry, "and"), field_lookup, depth + 1)
-            return nil if nested.empty?
+            next if nested.nil? || nested.empty?
 
             Prato::Query::AndFilter.new(nested)
           else
@@ -71,10 +70,10 @@ module Prato
 
         entries = normalize_entries_to_hash(input)
 
-        Array(entries).map do |entry|
+        Array.wrap(entries).map do |entry|
           field = hash_access(entry, "field")
           order = hash_access(entry, "order")
-          is_desc = order == "desc" || order == "descending"
+          is_desc = %w[desc descending].include?(order)
 
           Prato::Query::Sort.new(parse_field(field, field_lookup), is_desc)
         end
@@ -85,7 +84,7 @@ module Prato
 
         entries = normalize_entries_to_hash(input)
 
-        Array(entries).map do |entry|
+        Array.wrap(entries).map do |entry|
           parse_field(entry, field_lookup)
         end
       end

@@ -5,14 +5,6 @@ require "test_helper"
 module SortingUnitsTestHelper
   private
 
-  def sort(field, order = :asc)
-    Prato::Query::Sort.new(field, order)
-  end
-
-  def params_with_sorts(*sorts)
-    Prato::Query::Parameters.new(sorts: sorts)
-  end
-
   def names_for(table, scope: User.all, params: nil)
     table.to_table(scope, params: params)[:entries].map { |entry| entry[:name] }
   end
@@ -22,11 +14,11 @@ module SortingUnitsTestHelper
   end
 
   def sorted_names(table, *sorts, scope: User.all)
-    names_for(table, scope: scope, params: params_with_sorts(*sorts))
+    names_for(table, scope: scope, params: query_params(sorts: sorts))
   end
 
   def sorted_titles(table, *sorts, scope: Post.all)
-    titles_for(table, scope: scope, params: params_with_sorts(*sorts))
+    titles_for(table, scope: scope, params: query_params(sorts: sorts))
   end
 end
 
@@ -39,7 +31,7 @@ class TestSortingDirectColumns < Minitest::Test
       column(:age)
     end
 
-    assert_equal %w[Bob Carol Alice Dave], sorted_names(table, sort(:age, :asc))
+    assert_equal %w[Bob Carol Alice Dave], sorted_names(table, query_sort(:age, :asc))
   end
 end
 
@@ -64,7 +56,7 @@ class TestSortingAssociationColumns < Minitest::Test
         "Market update",
         "Unpublished"
       ],
-      sorted_titles(table, sort(:author_name, :asc), sort(:title, :asc))
+      sorted_titles(table, query_sort(:author_name, :asc), query_sort(:title, :asc))
     )
   end
 
@@ -78,8 +70,8 @@ class TestSortingAssociationColumns < Minitest::Test
       %w[Bob Alice Carol],
       sorted_names(
         table,
-        sort(:company_name, :asc),
-        sort(:name, :desc),
+        query_sort(:company_name, :asc),
+        query_sort(:name, :desc),
         scope: User.where.not(company_id: nil)
       )
     )
@@ -95,7 +87,7 @@ class TestSortingExpressionColumns < Minitest::Test
       column(:age_plus_ten, expression: "users.age + 10")
     end
 
-    assert_equal %w[Dave Alice Carol Bob], sorted_names(table, sort(:age_plus_ten, :desc))
+    assert_equal %w[Dave Alice Carol Bob], sorted_names(table, query_sort(:age_plus_ten, :desc))
   end
 end
 
@@ -108,7 +100,7 @@ class TestSortingAggregateColumns < Minitest::Test
       column(:post_count, count: :posts)
     end
 
-    assert_equal %w[Alice Carol Bob Dave], sorted_names(table, sort(:post_count, :desc))
+    assert_equal %w[Alice Carol Bob Dave], sorted_names(table, query_sort(:post_count, :desc))
   end
 
   def test_sum_aggregate_column_sort_orders_records_descending
@@ -117,7 +109,7 @@ class TestSortingAggregateColumns < Minitest::Test
       column(:post_score, sum: %i[posts score])
     end
 
-    assert_equal %w[Alice Carol Bob Dave], sorted_names(table, sort(:post_score, :desc))
+    assert_equal %w[Alice Carol Bob Dave], sorted_names(table, query_sort(:post_score, :desc))
   end
 
   def test_avg_aggregate_column_sort_orders_records_descending
@@ -130,7 +122,7 @@ class TestSortingAggregateColumns < Minitest::Test
       %w[Alice Carol Bob],
       sorted_names(
         table,
-        sort(:avg_post_score, :desc),
+        query_sort(:avg_post_score, :desc),
         scope: users_with_posts_scope
       )
     )
@@ -146,8 +138,8 @@ class TestSortingAggregateColumns < Minitest::Test
       %w[Bob Carol Alice],
       sorted_names(
         table,
-        sort(:min_post_score, :asc),
-        sort(:name, :desc),
+        query_sort(:min_post_score, :asc),
+        query_sort(:name, :desc),
         scope: users_with_posts_scope
       )
     )
@@ -163,8 +155,8 @@ class TestSortingAggregateColumns < Minitest::Test
       %w[Alice Carol Bob],
       sorted_names(
         table,
-        sort(:max_post_score, :desc),
-        sort(:name, :asc),
+        query_sort(:max_post_score, :desc),
+        query_sort(:name, :asc),
         scope: users_with_posts_scope
       )
     )
@@ -193,7 +185,7 @@ class TestSortingRubyColumns < Minitest::Test
 
     assert_equal(
       %w[Alice Carol Bob Dave],
-      names_for(table, params: params_with_sorts(sort(:post_count, :desc)))
+      names_for(table, params: query_params(sorts: [query_sort(:post_count, :desc)]))
     )
   end
 
@@ -211,7 +203,7 @@ class TestSortingRubyColumns < Minitest::Test
       %w[Dave Carol Alice Bob],
       names_for(
         table,
-        params: params_with_sorts(sort(:company_name, :desc), sort(:name, :asc))
+        params: query_params(sorts: [query_sort(:company_name, :desc), query_sort(:name, :asc)])
       )
     )
   end
@@ -231,7 +223,7 @@ class TestSortingRubyColumns < Minitest::Test
       %w[Alice Bob Carol Dave],
       names_for(
         table,
-        params: params_with_sorts(sort(:company_name, :asc), sort(:age, :desc))
+        params: query_params(sorts: [query_sort(:company_name, :asc), query_sort(:age, :desc)])
       )
     )
   end
@@ -248,7 +240,7 @@ class TestSortingQueryOnlyColumnsAndValidation < Minitest::Test
 
     result = table.to_table(
       Post.all,
-      params: params_with_sorts(sort(:author_name, :asc), sort(:title, :asc))
+      params: query_params(sorts: [query_sort(:author_name, :asc), query_sort(:title, :asc)])
     )
 
     assert_equal(
@@ -275,7 +267,7 @@ class TestSortingQueryOnlyColumnsAndValidation < Minitest::Test
 
     result = table.to_table(
       User.all,
-      params: params_with_sorts(sort(:name, :asc))
+      params: query_params(sorts: [query_sort(:name, :asc)])
     )
 
     assert_equal [], result[:entries]
@@ -291,7 +283,7 @@ class TestSortingQueryOnlyColumnsAndValidation < Minitest::Test
     assert_raises(ArgumentError) do
       table.to_table(
         User.all,
-        params: params_with_sorts(sort(:name, :asc))
+        params: query_params(sorts: [query_sort(:name, :asc)])
       )
     end
   end

@@ -167,16 +167,10 @@ module FilteringUnitsTestHelper
   end
 
   def filtered_result(table, field, operator, value)
-    filter = Prato::Query::Filter.new(resolve_field(field), operator, value)
-
     table.to_table(
       User.order(:id),
-      params: Prato::Query::Parameters.new(filters: filter)
+      params: query_params(filters: query_filter(field, operator, value))
     )
-  end
-
-  def resolve_field(field)
-    field.is_a?(Array) ? Prato::Query::FieldResolver.join(field) : field
   end
 end
 
