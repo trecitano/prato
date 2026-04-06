@@ -29,7 +29,7 @@ module Prato
             column = spec.columns[sort.field]
             scope = Internal::JoinHelper.ensure_join(scope, column, left_outer: true)
             node = column.sql_node_for(scope)
-            order = sort.order == :desc ? node.desc : node.asc
+            order = sort.is_desc ? node.desc : node.asc
             scope = scope.order(order)
           end
 
@@ -48,7 +48,7 @@ module Prato
               val_b = column.extract_value(b, ruby_data)
 
               result = safe_compare(val_a, val_b)
-              sort.order == :desc ? -result : result
+              sort.is_desc  ? -result : result
             end
           end
 

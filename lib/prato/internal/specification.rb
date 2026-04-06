@@ -3,13 +3,14 @@
 module Prato
   module Internal
     class Specification
-      attr_reader :columns, :visible_fields, :ruby_loaders, :config
+      attr_reader :columns, :visible_fields, :ruby_loaders, :field_lookup, :config
 
       def initialize(columns:,
                      visible_fields:,
                      filterable_fields:,
                      sortable_fields:,
                      output_paths:,
+                     field_lookup:,
                      ruby_loaders:,
                      config:)
         @columns = columns
@@ -17,6 +18,7 @@ module Prato
         @filterable_fields = filterable_fields
         @sortable_fields = sortable_fields
         @output_paths = output_paths
+        @field_lookup = field_lookup
         @ruby_loaders = ruby_loaders
         @config = config
       end

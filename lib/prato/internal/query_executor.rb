@@ -27,11 +27,11 @@ module Prato
 
       private
 
-      def resolve_parameters(input, config)
+      def resolve_parameters(input, config, spec)
         return nil if input.nil?
         return input if input.is_a?(Query::Parameters)
 
-        config.parameter_parser.parse_parameters(input, Prato::Query::FieldResolver.resolve_context(config))
+        config.parameter_parser.parse_parameters(input, Prato::Query::FieldResolver.resolve_context(spec.field_lookup))
       end
 
       def invalid_input_result(configuration)

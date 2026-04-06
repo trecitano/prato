@@ -5,13 +5,19 @@ require "json"
 module Prato
   module Query
     class DefaultParser
-      def parse_parameters(input, context)
+      def parse_parameters(input, field_lookup)
+        page = hash_access(input, "page")
+        per_page = hash_access(input, "per_page")
+        filters = hash_access(input, "filters")
+        sorts = hash_access(input, "sorts")
+        fields = hash_access(input, "fields")
+
         Prato::Query::Parameters.new(
-          page: parse_page(input["page"], context),
-          per_page: parse_per_page(input["per_page"], context),
-          filters: parse_filters(input["filters"], context),
-          sorts: parse_sorts(input["sorts"], context),
-          fields: parse_fields(input["fields"], context)
+          page: parse_page(page),
+          per_page: parse_per_page(per_page),
+          filters: parse_filters(filters, field_lookup),
+          sorts: parse_sorts(sorts, field_lookup),
+          fields: parse_fields(fields, field_lookup)
         )
       end
 
@@ -23,36 +29,36 @@ module Prato
         safe_parse_integer(raw_value)
       end
 
-      def parse_filters(input, context)
+      def parse_filters(input, field_lookup)
         return nil if input.nil?
 
         entries = normalize_entries_to_hash(input)
-        parse_filter_entries(entries, context)
+        parse_filter_entries(entries, field_lookup)
       end
 
-      def parse_filter_entries(entries, context, depth = 0)
+      def parse_filter_entries(entries, field_lookup, depth = 0)
         if depth == 10
           raise ArgumentError, "Filter nesting too deep (maximum depth: 10)"
         end
 
         Array(entries).map do |entry|
-          if entry.key?("or")
-            nested = parse_filter_entries(entry["or"], context, depth + 1)
+          if hash_access(entry, "or")
+            nested = parse_filter_entries(hash_access(entry, "or"), field_lookup, depth + 1)
             return nil if nested.empty?
 
             Prato::Query::OrFilter.new(nested)
-          elsif entry.key?("and")
-            nested = parse_filter_entries(entry["and"], context, depth + 1)
+          elsif hash_access(entry, "and")
+            nested = parse_filter_entries(hash_access(entry, "and"), field_lookup, depth + 1)
             return nil if nested.empty?
 
             Prato::Query::AndFilter.new(nested)
           else
-            field = entry["field"]
-            operator = entry["operator"]
-            value = entry["value"]
+            field = hash_access(entry, "field")
+            operator = hash_access(entry, "operator")
+            value = hash_access(entry, "value")
 
             Prato::Query::Filter.new(
-              parse_field(field, context),
+              parse_field(field, field_lookup),
               operator.to_sym,
               value
             )
@@ -60,26 +66,27 @@ module Prato
         end
       end
 
-      def parse_sorts(input, context)
+      def parse_sorts(input, field_lookup)
         return nil if input.nil?
 
         entries = normalize_entries_to_hash(input)
 
         Array(entries).map do |entry|
-          field = entry["field"]
-          order = entry["order"]
+          field = hash_access(entry, "field")
+          order = hash_access(entry, "order")
+          is_desc = order == "desc" || order == "descending"
 
-          Prato::Query::Sort.new(parse_field(field, context), order)
+          Prato::Query::Sort.new(parse_field(field, field_lookup), is_desc)
         end
       end
 
-      def parse_fields(input, context)
+      def parse_fields(input, field_lookup)
         return nil if input.nil?
 
         entries = normalize_entries_to_hash(input)
 
         Array(entries).map do |entry|
-          parse_field(entry, context)
+          parse_field(entry, field_lookup)
         end
       end
 
@@ -109,6 +116,10 @@ module Prato
         else
           raise ArgumentError, "Invalid filters type: #{input.class}"
         end
+      end
+
+      def hash_access(entry, key)
+        entry[key] || entry[key.to_sym]
       end
     end
   end

@@ -3,11 +3,11 @@
 module Prato
   module Query
     class Sort
-      attr_reader :field, :order
+      attr_reader :field, :is_desc
 
-      def initialize(field, order)
+      def initialize(field, is_desc)
         @field = field
-        @order = order
+        @is_desc = is_desc
       end
     end
   end

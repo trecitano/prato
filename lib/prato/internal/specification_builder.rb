@@ -77,10 +77,11 @@ module Prato
         filterable_fields = Set.new
         sortable_fields = Set.new
         output_paths = {}
+        field_lookup = {}
 
         @draft_columns.each do |draft|
           column_output_path = draft.output_paths.map do |path|
-            transform_key_part(path, @config.key_transformation).to_sym
+            transform_key_part(path, @config.key_transformation)
           end
           internal_column_name = Query::FieldResolver.join(draft.output_paths)
 
@@ -105,7 +106,8 @@ module Prato
           visible_fields << internal_column_name unless draft.query_only
           filterable_fields << internal_column_name if filterable
           sortable_fields << internal_column_name if sortable
-          output_paths[internal_column_name] = column_output_path
+          output_paths[internal_column_name] = column_output_path.map(&:to_sym)
+          field_lookup[column_output_path.map(&:to_s)] = internal_column_name
         end
 
         Specification.new(
@@ -114,6 +116,7 @@ module Prato
           filterable_fields: filterable_fields,
           sortable_fields: sortable_fields,
           output_paths: output_paths,
+          field_lookup: field_lookup,
           ruby_loaders: @ruby_loaders,
           config: @config
         )
