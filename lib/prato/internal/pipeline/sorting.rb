@@ -29,7 +29,7 @@ module Prato
             column = spec.columns[sort.field]
             scope = Internal::JoinHelper.ensure_join(scope, column, left_outer: true)
             node = column.sql_node_for(scope)
-            order = sort.is_desc ? node.desc : node.asc
+            order = build_order_node(node, sort.is_desc)
             scope = scope.order(order)
           end
 
@@ -61,6 +61,16 @@ module Prato
           return -1 if b.nil?
 
           a <=> b
+        end
+
+        if ActiveRecordVersion.supports_arel_desc?
+          def build_order_node(node, is_desc)
+            is_desc ? node.desc : node.asc
+          end
+        else
+          def build_order_node(node, is_desc)
+            is_desc ? Arel::Nodes::Descending.new(node) : Arel::Nodes::Ascending.new(node)
+          end
         end
       end
     end

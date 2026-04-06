@@ -83,8 +83,10 @@ module QueryInputHelpers
   end
 end
 
-class Minitest::Test
-  include QueryInputHelpers
+unless ENV["PRATO_TEST_BOOT_ONLY"] == "1"
+  class Minitest::Test
+    include QueryInputHelpers
+  end
 end
 
 def query_logs_supported?

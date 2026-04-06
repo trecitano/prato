@@ -6,6 +6,7 @@ module Prato
       extend self
 
       LEGACY_CUTOFF = Gem::Version.new("5.2").freeze
+      MINIMUM_AREL_DESC_VERSION = Gem::Version.new("6.0").freeze
 
       def version
         @version ||= Gem::Version.new(ActiveRecord::VERSION::STRING)
@@ -13,6 +14,10 @@ module Prato
 
       def legacy?
         version < LEGACY_CUTOFF
+      end
+
+      def supports_arel_desc?
+        version >= MINIMUM_AREL_DESC_VERSION
       end
     end
   end

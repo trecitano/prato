@@ -13,11 +13,13 @@ module SortingUnitsTestHelper
     table.to_table(scope, params: params)[:entries].map { |entry| entry[:title] }
   end
 
-  def sorted_names(table, *sorts, scope: User.all)
+  def sorted_names(table, *sorts, scope: User.all, **sort)
+    sorts << sort unless sort.empty?
     names_for(table, scope: scope, params: query_params(sorts: sorts))
   end
 
-  def sorted_titles(table, *sorts, scope: Post.all)
+  def sorted_titles(table, *sorts, scope: Post.all, **sort)
+    sorts << sort unless sort.empty?
     titles_for(table, scope: scope, params: query_params(sorts: sorts))
   end
 end

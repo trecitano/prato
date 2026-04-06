@@ -40,7 +40,7 @@ module Prato
       def parse_filter_entries(entries, field_lookup, depth = 0)
         raise ArgumentError, "Filter nesting too deep (maximum depth: 10)" if depth == 10
 
-        Array.wrap(entries).filter_map do |entry|
+        Array.wrap(entries).map do |entry|
           if hash_access(entry, "or")
             nested = parse_filter_entries(hash_access(entry, "or"), field_lookup, depth + 1)
             next if nested.nil? || nested.empty?
@@ -62,7 +62,7 @@ module Prato
               value
             )
           end
-        end
+        end.compact
       end
 
       def parse_sorts(input, field_lookup)
