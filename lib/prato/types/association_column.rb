@@ -30,7 +30,7 @@ module Prato
 
       def extract_value(record, _ruby_data)
         target = @association_path.reduce(record) { |obj, assoc| obj&.public_send(assoc) }
-        target&.public_send(@attribute_name)
+        target&.[](@attribute_name)
       end
     end
   end
