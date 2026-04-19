@@ -126,6 +126,8 @@ module Prato
       private
 
       def resolve_capability(capability, draft)
+        return true if capability == :filter && !draft.column.filter.nil?
+
         only = draft.only || (draft.query_only ? nil : @config.default_only)
 
         if only

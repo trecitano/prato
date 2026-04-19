@@ -102,6 +102,35 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
     assert_equal 0, result[:totalCount]
   end
 
+  def test_display_only_column_with_filter_option_remains_filterable
+    table = Prato.table(User) do
+      column(:name, only: :display, filter: [:eq])
+    end
+
+    result = table.to_table(
+      User.order(:id),
+      params: query_params(filters: query_filter(:name, :eq, "Alice"))
+    )
+
+    assert_equal ["Alice"], result[:entries].map { |entry| entry[:name] }
+    assert_equal 1, result[:totalCount]
+  end
+
+  def test_display_default_only_can_be_overridden_with_filter_option
+    table = Prato.table(User) do
+      configure(default_only: :display)
+      column(:name, filter: [:eq])
+    end
+
+    result = table.to_table(
+      User.order(:id),
+      params: query_params(filters: query_filter(:name, :eq, "Alice"))
+    )
+
+    assert_equal ["Alice"], result[:entries].map { |entry| entry[:name] }
+    assert_equal 1, result[:totalCount]
+  end
+
   def test_filtering_on_display_only_column_raises_when_invalid_input_is_configured_to_raise
     table = Prato.table(User) do
       configure(on_invalid_input: :raise)
