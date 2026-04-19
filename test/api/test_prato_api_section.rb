@@ -299,7 +299,7 @@ class TestApiSectionQuerying < Minitest::Test
       column(:name)
 
       section(:computed) do
-        ruby_column(:company_name, key: :id) do |records, _|
+        ruby_column(:company_name, key: :id, includes: :company) do |records, _|
           index_records_by_id(records) { |user| user.company&.name }
         end
       end

@@ -24,10 +24,10 @@ module FilteringComplexHelpers
       ruby_column(:body_length, key: :id)
       ruby_column(:body_upcase, key: :id)
       ruby_column(:body_starts_with_g, key: :id)
-      ruby_column(:commenter_company, key: :id)
-      ruby_column(:post_author_company, key: :id)
-      ruby_column(:category_name_ruby, key: :id)
-      ruby_column(:parent_category_name_ruby, key: :id)
+      ruby_column(:commenter_company, key: :id, includes: { user: :company })
+      ruby_column(:post_author_company, key: :id, includes: { post: { user: :company } })
+      ruby_column(:category_name_ruby, key: :id, includes: { post: :category })
+      ruby_column(:parent_category_name_ruby, key: :id, includes: { post: { category: :parent_category } })
 
       ruby_loader(:body_map) do |records, _cache|
         index_records_by_id(records, &:body)
@@ -130,11 +130,11 @@ module FilteringComplexHelpers
         transform_hash_values(cache[:body_map]) { |body| body.start_with?("G") ? body : nil }
       end
 
-      ruby_loader(:commenter_company) do |records, _cache|
+      ruby_loader(:commenter_company, includes: { user: :company }) do |records, _cache|
         index_records_by_id(records) { |comment| comment.user.company&.name }
       end
 
-      ruby_loader(:post_author_company) do |records, _cache|
+      ruby_loader(:post_author_company, includes: { post: { user: :company } }) do |records, _cache|
         index_records_by_id(records) { |comment| comment.post.user.company&.name }
       end
 
@@ -199,11 +199,11 @@ module FilteringComplexHelpers
         transform_hash_values(cache[:body_map]) { |body| body.start_with?("G") ? body : nil }
       end
 
-      ruby_loader(:commenter_company) do |records, _cache|
+      ruby_loader(:commenter_company, includes: { user: :company }) do |records, _cache|
         index_records_by_id(records) { |comment| comment.user.company&.name }
       end
 
-      ruby_loader(:post_author_company) do |records, _cache|
+      ruby_loader(:post_author_company, includes: { post: { user: :company } }) do |records, _cache|
         index_records_by_id(records) { |comment| comment.post.user.company&.name }
       end
 

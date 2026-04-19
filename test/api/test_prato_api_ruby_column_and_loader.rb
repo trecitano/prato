@@ -393,7 +393,7 @@ class TestApiRubyColumn < Minitest::Test
 
   def test_single_argument_with_dependencies_with_block
     table = Prato.table(User) do
-      ruby_column(:company_stuff, key: ->(r) { r.company&.id }) do |users, _|
+      ruby_column(:company_stuff, key: ->(r) { r.company&.id }, includes: :company) do |users, _|
         companies = users.map(&:company).compact.uniq(&:id)
         companies.map { |c| [c.id, "I am company #{c.name}"]}.to_h
       end
@@ -416,7 +416,7 @@ class TestApiRubyColumn < Minitest::Test
 
   def test_single_argument_with_dependencies_with_separate_loader_with_block
     table = Prato.table(User) do
-      ruby_column(:number_companies, key: "total") do |_, ctx|
+      ruby_column(:number_companies, key: "total", includes: :company) do |_, ctx|
         companies = ctx[:company_stuff]
         { "total" => companies.size }
       end
@@ -469,4 +469,72 @@ class TestApiRubyColumnFilterOption < Minitest::Test
       end
     end
   end
+end
+
+class TestApiRubyColumnIncludes < Minitest::Test
+  def test_ruby_column_includes_preloads_associations_for_inline_loader
+    table = Prato.table(User) do
+      ruby_column(:company_name, key: :id, includes: :company) do |records, _|
+        index_records_by_id(records) { |user| user.company&.name }
+      end
+    end
+
+    assert_select_query_count(2) do
+      result = table.to_table(User.order(:id))
+
+      assert_equal ["Acme Corp", "Acme Corp", "Globex", nil], result[:entries].map { |entry| entry[:companyName] }
+    end
+  end
+
+  def test_ruby_column_includes_accept_strings_like_rails
+    table = Prato.table(User) do
+      ruby_column(:company_name, key: :id, includes: "company") do |records, _|
+        index_records_by_id(records) { |user| user.company&.name }
+      end
+    end
+
+    result = table.to_table(User.order(:id))
+
+    assert_equal ["Acme Corp", "Acme Corp", "Globex", nil], result[:entries].map { |entry| entry[:companyName] }
+  end
+
+  def test_ruby_column_includes_support_nested_rails_shapes_with_loader
+    table = Prato.table(Comment) do
+      ruby_column(:comment_context, key: :id, includes: [:user, { post: { user: :company } }])
+
+      ruby_loader(:comment_context) do |records, _|
+        index_records_by_id(records) do |comment|
+          [comment.user.name, comment.post.user.company&.name].join(" / ")
+        end
+      end
+    end
+
+    result = table.to_table(Comment.order(:id))
+
+    assert_equal [
+      "Bob / Acme Corp",
+      "Carol / Acme Corp",
+      "Dave / Acme Corp"
+    ], result[:entries].first(3).map { |entry| entry[:commentContext] }
+  end
+
+end
+
+class TestApiRubyLoaderIncludes < Minitest::Test
+  def test_ruby_loader_includes_preloads_associations_for_separate_loader
+    table = Prato.table(User) do
+      ruby_column(:company_name, key: :id)
+
+      ruby_loader(:company_name, includes: :company) do |records, _|
+        index_records_by_id(records) { |user| user.company&.name }
+      end
+    end
+
+    assert_select_query_count(2) do
+      result = table.to_table(User.order(:id))
+
+      assert_equal ["Acme Corp", "Acme Corp", "Globex", nil], result[:entries].map { |entry| entry[:companyName] }
+    end
+  end
+
 end

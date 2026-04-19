@@ -25,7 +25,7 @@ module Prato
         columns = spec.columns
         scope = dataset
         selects = Set.new([Arel.sql("#{scope.model.table_name}.*")])
-        association_paths = []
+        includes_values = []
 
         @materialization_fields.each do |field|
           column = columns[field]
@@ -34,13 +34,17 @@ module Prato
           when Types::AggregateColumn, Types::ExpressionColumn
             selects << column.select_node
           when Types::AssociationColumn
-            association_paths << column.association_path
+            includes_values << association_path_to_includes(column.association_path)
+          when Types::RubyColumn
+            includes_values << column.includes if column.includes
+
+            loader = spec.ruby_loaders&.[](column.loader)
+            includes_values << loader[:includes] if loader && loader[:includes]
           end
         end
 
-        if association_paths.any?
-          includes = build_associations(association_paths.uniq)
-          scope = scope.includes(includes)
+        if includes_values.any?
+          scope = scope.includes(*includes_values)
         end
 
         scope = scope.select(selects.to_a)
@@ -49,7 +53,7 @@ module Prato
         ruby_loaded_data = nil
         if spec.ruby_loaders&.any?
           ruby_loaded_data = LazyLoaderCache.new(records)
-          spec.ruby_loaders.each { |key, block| ruby_loaded_data[key] = block }
+          spec.ruby_loaders.each { |key, loader| ruby_loaded_data[key] = loader[:block] }
         end
 
         @records = records
@@ -59,20 +63,11 @@ module Prato
 
       private
 
-      def build_associations(paths)
-        result = {}
+      def association_path_to_includes(path)
+        head, *tail = path
+        return head if tail.empty?
 
-        paths.each do |path|
-          next if path.empty?
-
-          current = result
-          path.each do |assoc|
-            current[assoc] ||= {}
-            current = current[assoc]
-          end
-        end
-
-        result
+        { head => association_path_to_includes(tail) }
       end
 
       def initialize(dataset, ruby_loaded_data, materialization_fields)

@@ -196,7 +196,7 @@ class TestSortingRubyColumns < Minitest::Test
       column(:name)
       ruby_column(:company_name, key: :id)
 
-      ruby_loader(:company_name) do |records, _cache|
+      ruby_loader(:company_name, includes: :company) do |records, _cache|
         index_records_by_id(records) { |user| user.company&.name }
       end
     end
@@ -216,7 +216,7 @@ class TestSortingRubyColumns < Minitest::Test
       column(:age)
       ruby_column(:company_name, key: :id)
 
-      ruby_loader(:company_name) do |records, _cache|
+      ruby_loader(:company_name, includes: :company) do |records, _cache|
         index_records_by_id(records) { |user| user.company&.name }
       end
     end
@@ -228,6 +228,29 @@ class TestSortingRubyColumns < Minitest::Test
         params: query_params(sorts: [query_sort(:company_name, :asc), query_sort(:age, :desc)])
       )
     )
+  end
+end
+
+class TestSortingRubyColumnIncludes < Minitest::Test
+  include SortingUnitsTestHelper
+
+  def test_ruby_sort_can_use_includes_when_sort_field_is_not_displayed
+    table = Prato.table(User) do
+      column(:name)
+      ruby_column(:company_name, key: :id, includes: :company)
+
+      ruby_loader(:company_name) do |records, _cache|
+        index_records_by_id(records) { |user| user.company&.name }
+      end
+    end
+
+    result = table.to_table(
+      User.order(:id),
+      params: query_params(fields: :name, sorts: [query_sort(:company_name, :asc), query_sort(:name, :asc)])
+    )
+
+    assert_equal %w[Alice Bob Carol Dave], result[:entries].map { |entry| entry[:name] }
+    assert(result[:entries].all? { |entry| entry.keys == [:name] })
   end
 end
 

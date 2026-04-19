@@ -83,9 +83,45 @@ module QueryInputHelpers
   end
 end
 
+module QueryCountHelpers
+  private
+
+  def capture_select_queries
+    queries = []
+
+    callback = lambda do |_name, _start, _finish, _id, payload|
+      sql = payload[:sql]
+      name = payload[:name]
+
+      next if payload[:cached]
+      next if name == "SCHEMA" || name == "TRANSACTION"
+      next unless sql&.match?(/\ASELECT\b/i)
+
+      queries << sql
+    end
+
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      yield
+    end
+
+    queries
+  end
+
+  def assert_select_query_count(expected_count)
+    queries = capture_select_queries { yield }
+
+    assert_equal(
+      expected_count,
+      queries.length,
+      "Expected #{expected_count} SELECT queries, got #{queries.length}:\n#{queries.join("\n")}"
+    )
+  end
+end
+
 unless ENV["PRATO_TEST_BOOT_ONLY"] == "1"
   class Minitest::Test
     include QueryInputHelpers
+    include QueryCountHelpers
   end
 end
 
@@ -375,6 +411,10 @@ if ENV["VERBOSE_SQL"] == "1"
     caller_line = caller.find { |line| line.include?("prato") && !line.include?("vendor") }
     puts "  -> #{caller_line}" if caller_line
   end
+end
+
+if ActiveRecord::Base.respond_to?(:strict_loading_by_default=)
+  ActiveRecord::Base.strict_loading_by_default = true
 end
 
 case test_database_mode

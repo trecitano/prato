@@ -28,8 +28,8 @@ module Prato
       @spec_builder.inner_section(id, &block)
     end
 
-    def ruby_loader(id, &block)
-      @spec_builder.inner_ruby_loader(id, &block)
+    def ruby_loader(id, **kwargs, &block)
+      @spec_builder.inner_ruby_loader(id, **kwargs, &block)
     end
 
     def configure(config = nil, **overrides)

@@ -256,7 +256,7 @@ class TestFilteringRubyColumns < Minitest::Test
         index_records_by_id(records) { |user| user.name.upcase }
       end
 
-      ruby_loader(:company_name) do |records, _cache|
+      ruby_loader(:company_name, includes: :company) do |records, _cache|
         index_records_by_id(records) { |user| user.company&.name }
       end
     end
@@ -344,6 +344,29 @@ class TestFilteringArrayAllowlistRubyColumns < Minitest::Test
   end
 end
 
+class TestFilteringRubyColumnIncludes < Minitest::Test
+  def setup
+    @table = Prato.table(User) do
+      column(:name)
+      ruby_column(:company_name, key: :id, includes: :company)
+
+      ruby_loader(:company_name) do |records, _cache|
+        index_records_by_id(records) { |user| user.company&.name }
+      end
+    end
+  end
+
+  def test_ruby_filter_can_use_includes_when_filter_field_is_not_displayed
+    result = @table.to_table(
+      User.order(:id),
+      params: query_params(fields: :name, filters: query_filter(:company_name, :eq, "Acme Corp"))
+    )
+
+    assert_equal %w[Alice Bob], result[:entries].map { |entry| entry[:name] }
+    assert_equal 2, result[:totalCount]
+  end
+end
+
 class TestFilteringSqlNormalColumnsSection < Minitest::Test
   extend FilteringUnitsTestDefinitions
   include FilteringUnitsTestHelper
@@ -412,7 +435,7 @@ class TestFilteringRubyColumnsSection < Minitest::Test
         ruby_column(:name_upcase, key: :id) do |records, _cache|
           index_records_by_id(records) { |user| user.name.upcase }
         end
-        ruby_column(:company_name, key: :id) do |records, _cache|
+        ruby_column(:company_name, key: :id, includes: :company) do |records, _cache|
           index_records_by_id(records) { |user| user.company&.name }
         end
       end

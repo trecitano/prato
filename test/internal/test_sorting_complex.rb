@@ -54,7 +54,7 @@ class TestSortingAfterRubyFiltering < Minitest::Test
     table = Prato.table(User) do
       column(:name)
       column(:age)
-      ruby_column(:company_name, key: :id, &company_name_loader_proc)
+      ruby_column(:company_name, key: :id, includes: :company, &company_name_loader_proc)
     end
 
     assert_equal(
@@ -96,7 +96,7 @@ class TestSortingAfterRubyFiltering < Minitest::Test
     table = Prato.table(User) do
       column(:name)
       column(:age)
-      ruby_column(:company_name, key: :id, &company_name_loader_proc)
+      ruby_column(:company_name, key: :id, includes: :company, &company_name_loader_proc)
     end
 
     assert_equal(
@@ -117,7 +117,7 @@ class TestSortingAfterRubyFiltering < Minitest::Test
     table = Prato.table(User) do
       column(:name)
       query_column(:age_plus_ten, expression: "users.age + 10")
-      ruby_column(:company_name, key: :id, &company_name_loader_proc)
+      ruby_column(:company_name, key: :id, includes: :company, &company_name_loader_proc)
     end
 
     result = table.to_table(
@@ -138,7 +138,7 @@ class TestSortingAfterRubyFiltering < Minitest::Test
     table = Prato.table(User) do
       column(:name)
       query_column(:post_count_sql, count: :posts)
-      ruby_column(:company_name, key: :id, &company_name_loader_proc)
+      ruby_column(:company_name, key: :id, includes: :company, &company_name_loader_proc)
     end
 
     result = table.to_table(
@@ -198,7 +198,7 @@ class TestSortingComplexSections < Minitest::Test
       end
 
       section(:computed) do
-        ruby_column(:company_name, key: :id, &company_name_loader_proc)
+        ruby_column(:company_name, key: :id, includes: :company, &company_name_loader_proc)
       end
     end
 

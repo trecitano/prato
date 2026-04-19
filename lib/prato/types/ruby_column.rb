@@ -3,12 +3,13 @@
 module Prato
   module Types
     class RubyColumn
-      attr_reader :filter
+      attr_reader :loader, :filter, :includes
 
-      def initialize(loader, key:, filter: nil)
+      def initialize(loader, key:, filter: nil, includes: nil)
         @loader = loader
         @key = key || :id
         @filter = filter
+        @includes = includes
       end
 
       def extract_value(record, ruby_data)

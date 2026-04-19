@@ -14,7 +14,7 @@ module Prato
       AGGREGATE_FUNCTIONS = %i[count sum avg min max].freeze
       COMMON_RESERVED_KEYWORDS = %i[only].freeze
       RESERVED_COLUMN_SYMBOLS = (%i[format expression filter] + COMMON_RESERVED_KEYWORDS + AGGREGATE_FUNCTIONS).freeze
-      RESERVED_RUBY_COLUMN_SYMBOLS = (%i[key filter] + COMMON_RESERVED_KEYWORDS).freeze
+      RESERVED_RUBY_COLUMN_SYMBOLS = (%i[key filter includes] + COMMON_RESERVED_KEYWORDS).freeze
 
       def inner_column(*args, **kwargs)
         draft = build_draft(args, kwargs)
@@ -32,7 +32,7 @@ module Prato
 
         key = parse_accessor(options[:key])
         validate_filter_option!(options[:filter])
-        column = ::Prato::Types::RubyColumn.new(loader_id, key: key, filter: options[:filter])
+        column = ::Prato::Types::RubyColumn.new(loader_id, key: key, filter: options[:filter], includes: options[:includes])
 
         @draft_columns << DraftColumn.new(display_name, loader_id, column)
         inner_ruby_loader(loader_id, &block) if block_given?
@@ -63,9 +63,12 @@ module Prato
         @ruby_loaders.merge!(section.spec.ruby_loaders)
       end
 
-      def inner_ruby_loader(id, &block)
+      def inner_ruby_loader(id, includes: nil, &block)
         @ruby_loaders ||= {}
-        @ruby_loaders[id] = block
+        @ruby_loaders[id] = {
+          block: block,
+          includes: includes
+        }
       end
 
       def inner_config(config)
@@ -148,7 +151,7 @@ module Prato
 
         loader = loaders[loader_name]
         raise ArgumentError, "No ruby loader registered for '#{loader_name}'." unless loaders.key?(loader_name)
-        return if loader.respond_to?(:call)
+        return if loader.is_a?(Hash) && loader[:block].respond_to?(:call)
 
         raise ArgumentError, "Ruby loader '#{loader_name}' must respond to #call."
       end
