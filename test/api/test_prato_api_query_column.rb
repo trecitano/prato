@@ -56,6 +56,35 @@ class TestApiQueryColumnFiltering < Minitest::Test
     assert_equal ["Hello", "Hello", "Young dev"], result[:entries].map { |entry| entry[:title] }.sort
     assert_equal 3, result[:totalCount]
   end
+
+  def test_query_column_array_filter_allowlist_allows_default_filtering
+    table = Prato.table(Post) do
+      column(:title)
+      query_column(author_name: %i[user name], filter: %i[eq contains])
+    end
+
+    result = table.to_table(
+      Post.order(:id),
+      params: query_params(filters: query_filter(:author_name, :contains, "Ali"))
+    )
+
+    assert_equal(["Hello", "Draft", "Ruby tips", "More Ruby"], result[:entries].map { |entry| entry[:title] })
+  end
+
+  def test_query_column_array_filter_allowlist_rejects_other_operators
+    table = Prato.table(Post) do
+      column(:title)
+      query_column(author_name: %i[user name], filter: %i[eq])
+    end
+
+    result = table.to_table(
+      Post.order(:id),
+      params: query_params(filters: query_filter(:author_name, :contains, "Ali"))
+    )
+
+    assert_equal [], result[:entries]
+    assert_equal 0, result[:totalCount]
+  end
 end
 
 class TestApiDisplayOnlyColumnFiltering < Minitest::Test
@@ -83,6 +112,20 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
       table.to_table(
         User.order(:id),
         params: query_params(filters: query_filter(:name, :eq, "Alice"))
+      )
+    end
+  end
+
+  def test_disallowed_filter_operator_raises_when_invalid_input_is_configured_to_raise
+    table = Prato.table(User) do
+      configure(on_invalid_input: :raise)
+      column(:name, filter: [:eq])
+    end
+
+    assert_raises(ArgumentError) do
+      table.to_table(
+        User.order(:id),
+        params: query_params(filters: query_filter(:name, :contains, "Ali"))
       )
     end
   end

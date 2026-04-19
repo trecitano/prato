@@ -662,6 +662,32 @@ class TestApiColumnSingleArgumentHash < Minitest::Test
   end
 end
 
+class TestApiColumnFilterOption < Minitest::Test
+  def test_filter_rejects_invalid_option_type
+    assert_raises(ArgumentError) do
+      Prato.table(User) do
+        column(:name, filter: Object.new)
+      end
+    end
+  end
+
+  def test_filter_rejects_invalid_array_entries
+    assert_raises(ArgumentError) do
+      Prato.table(User) do
+        column(:name, filter: [:eq, 123])
+      end
+    end
+  end
+
+  def test_filter_rejects_string_operators
+    assert_raises(ArgumentError) do
+      Prato.table(User) do
+        column(:name, filter: %w[eq contains])
+      end
+    end
+  end
+end
+
 class TestApiColumnReservedKeywordNames < Minitest::Test
   include TestPratoApiColumn
 

@@ -293,7 +293,54 @@ class TestFilteringMembershipEdgeCases < Minitest::Test
 
   def test_ruby_not_in_with_empty_array_returns_all_rows
     assert_filter_names(@table, field: :name_upcase, operator: :not_in, value: [],
-                                expected_names: %w[Alice Bob Carol Dave])
+                                 expected_names: %w[Alice Bob Carol Dave])
+  end
+end
+
+class TestFilteringArrayAllowlistDirectColumns < Minitest::Test
+  include FilteringUnitsTestHelper
+
+  def setup
+    @table = Prato.table(User) do
+      column(:name, filter: %i[eq contains])
+    end
+  end
+
+  def test_allowed_operator_uses_default_filtering
+    assert_filter_names(@table, field: :name, operator: :contains, value: "li", expected_names: ["Alice"])
+  end
+
+  def test_disallowed_operator_returns_empty_result_by_default
+    result = filtered_result(@table, :name, :gt, "Bob")
+
+    assert_equal [], result[:entries]
+    assert_equal 0, result[:totalCount]
+  end
+end
+
+class TestFilteringArrayAllowlistRubyColumns < Minitest::Test
+  include FilteringUnitsTestHelper
+
+  def setup
+    @table = Prato.table(User) do
+      column(:name)
+      ruby_column(:name_upcase, key: :id, filter: %i[eq contains])
+
+      ruby_loader(:name_upcase) do |records, _cache|
+        index_records_by_id(records) { |user| user.name.upcase }
+      end
+    end
+  end
+
+  def test_allowed_operator_uses_default_ruby_filtering
+    assert_filter_names(@table, field: :name_upcase, operator: :contains, value: "AL", expected_names: ["Alice"])
+  end
+
+  def test_disallowed_operator_returns_empty_result_by_default
+    result = filtered_result(@table, :name_upcase, :gt, "BOB")
+
+    assert_equal [], result[:entries]
+    assert_equal 0, result[:totalCount]
   end
 end
 

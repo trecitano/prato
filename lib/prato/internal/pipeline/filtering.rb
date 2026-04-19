@@ -99,7 +99,7 @@ module Prato
             column = spec.columns[filter.field]
             scope = ensure_joins(query_state.dataset, column, filter.operator)
 
-            if column.filter
+            if custom_filter?(column)
               result = column.filter.call(scope, filter.operator, filter.value)
               return query_state.with_dataset(result) unless result.nil?
             end
@@ -120,7 +120,7 @@ module Prato
           when Query::Filter
             column = spec.columns[filter.field]
 
-            if column.filter
+            if custom_filter?(column)
               result = column.filter.call(scope, filter.operator, filter.value)
               return result.where_clause.ast unless result.nil?
             end
@@ -201,7 +201,7 @@ module Prato
             column = spec.columns[filter.field]
             actual = column.extract_value(record, ruby_data)
 
-            if column.filter
+            if custom_filter?(column)
               result = column.filter.call(actual, filter.operator, filter.value)
               return result unless result.nil?
             end
@@ -248,6 +248,10 @@ module Prato
               []
             end
           end
+        end
+
+        def custom_filter?(column)
+          column.filter.is_a?(Proc)
         end
 
         if ActiveRecordVersion.legacy?

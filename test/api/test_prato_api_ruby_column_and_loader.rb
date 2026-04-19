@@ -438,3 +438,35 @@ class TestApiRubyColumn < Minitest::Test
     )
   end
 end
+
+class TestApiRubyColumnFilterOption < Minitest::Test
+  def test_ruby_column_filter_rejects_invalid_option_type
+    assert_raises(ArgumentError) do
+      Prato.table(Company) do
+        ruby_column(:output, filter: Object.new) do |records, _|
+          records.to_h { |record| [record.id, "tested: #{record.id}"] }
+        end
+      end
+    end
+  end
+
+  def test_ruby_column_filter_rejects_invalid_array_entries
+    assert_raises(ArgumentError) do
+      Prato.table(Company) do
+        ruby_column(:output, filter: [:eq, 123]) do |records, _|
+          records.to_h { |record| [record.id, "tested: #{record.id}"] }
+        end
+      end
+    end
+  end
+
+  def test_ruby_column_filter_rejects_string_operators
+    assert_raises(ArgumentError) do
+      Prato.table(Company) do
+        ruby_column(:output, filter: %w[eq contains]) do |records, _|
+          records.to_h { |record| [record.id, "tested: #{record.id}"] }
+        end
+      end
+    end
+  end
+end

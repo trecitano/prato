@@ -51,7 +51,7 @@ module Prato
         Array(filters).all? do |filter|
           case filter
           when Query::Filter
-            if @filterable_fields.include?(filter.field)
+            if @filterable_fields.include?(filter.field) && valid_filter_operator?(filter)
               fields << filter.field
               true
             else
@@ -90,6 +90,11 @@ module Prato
             false
           end
         end
+      end
+
+      def valid_filter_operator?(filter)
+        column_filter = @columns[filter.field].filter
+        !column_filter.is_a?(Array) || column_filter.include?(filter.operator)
       end
     end
   end

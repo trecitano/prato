@@ -31,6 +31,7 @@ module Prato
         display_name, loader_id = parse_name_map(name_map)
 
         key = parse_accessor(options[:key])
+        validate_filter_option!(options[:filter])
         column = ::Prato::Types::RubyColumn.new(loader_id, key: key, filter: options[:filter])
 
         @draft_columns << DraftColumn.new(display_name, loader_id, column)
@@ -169,6 +170,7 @@ module Prato
         aggregate_function, aggregate_accessor = extract_aggregate(options)
         override_name, accessor = parse_name_map(name_map)
         accessor = parse_accessor(accessor)
+        validate_filter_option!(options[:filter])
 
         if aggregate_function
           column = ::Prato::Types::AggregateColumn.new(aggregate_function, aggregate_accessor,
@@ -176,7 +178,7 @@ module Prato
           DraftColumn.new(accessor, nil, column, only: only, query_only: query_only)
         elsif options[:expression]
           column = ::Prato::Types::ExpressionColumn.new(options[:expression], format: options[:format],
-                                                                              filter: options[:filter])
+                                                                               filter: options[:filter])
           DraftColumn.new(override_name, accessor, column, only: only, query_only: query_only)
         elsif accessor.is_a?(Array) && accessor.length > 1
           column = ::Prato::Types::AssociationColumn.new(accessor, format: options[:format], filter: options[:filter])
@@ -185,6 +187,13 @@ module Prato
           column = ::Prato::Types::DirectColumn.new(accessor, format: options[:format], filter: options[:filter])
           DraftColumn.new(override_name, accessor, column, only: only, query_only: query_only)
         end
+      end
+
+      def validate_filter_option!(filter)
+        return if filter.nil? || filter.is_a?(Proc)
+        return if filter.is_a?(Array) && filter.all? { |operator| operator.is_a?(Symbol) }
+
+        raise ArgumentError, "filter must be nil, an Array of symbols, or a Proc"
       end
 
       def extract_name_and_options(args, kwargs, reserved)
