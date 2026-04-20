@@ -25,7 +25,7 @@ module Prato
         columns = spec.columns
         scope = dataset
         selects = Set.new([Arel.sql("#{scope.model.table_name}.*")])
-        includes_values = []
+        association_load_values = []
 
         @materialization_fields.each do |field|
           column = columns[field]
@@ -34,17 +34,17 @@ module Prato
           when Types::AggregateColumn, Types::ExpressionColumn
             selects << column.select_node
           when Types::AssociationColumn
-            includes_values << association_path_to_includes(column.association_path)
+            association_load_values << association_path_to_association_load(column.association_path)
           when Types::RubyColumn
-            includes_values << column.includes if column.includes
+            association_load_values << column.includes if column.includes
 
             loader = spec.ruby_loaders&.[](column.loader)
-            includes_values << loader[:includes] if loader && loader[:includes]
+            association_load_values << loader[:includes] if loader && loader[:includes]
           end
         end
 
-        if includes_values.any?
-          scope = scope.includes(*includes_values)
+        if association_load_values.any?
+          scope = apply_association_loading(scope, association_load_values)
         end
 
         scope = scope.select(selects.to_a)
@@ -63,11 +63,21 @@ module Prato
 
       private
 
-      def association_path_to_includes(path)
+      if ActiveRecordVersion.legacy?
+        def apply_association_loading(scope, association_load_values)
+          scope.preload(*association_load_values)
+        end
+      else
+        def apply_association_loading(scope, association_load_values)
+          scope.includes(*association_load_values)
+        end
+      end
+
+      def association_path_to_association_load(path)
         head, *tail = path
         return head if tail.empty?
 
-        { head => association_path_to_includes(tail) }
+        { head => association_path_to_association_load(tail) }
       end
 
       def initialize(dataset, ruby_loaded_data, materialization_fields)
