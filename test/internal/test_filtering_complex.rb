@@ -330,13 +330,35 @@ class TestFilteringEdgeCases < Minitest::Test
     )
   end
 
+  def test_optional_association_icontains_matches_ruby_mirror_columns
+    ruby_table = build_comment_ruby_table
+    expected_bodies = [
+      "Good luck",
+      "Great post!",
+      "Love gems",
+      "Me too",
+      "Puma is great",
+      "Rails is fun",
+      "Really helpful",
+      "Thanks for sharing",
+      "Which ones?"
+    ]
+
+    sql_result = result_for(@table, query_filter(:post_parent_category, :icontains, "teCh"))
+    ruby_result = result_for(ruby_table, query_filter(:parent_category_name_ruby, :icontains, "teCh"))
+
+    assert_comment_bodies(sql_result, expected_bodies)
+    assert_comment_bodies(ruby_result, expected_bodies)
+  end
+
   def test_negated_optional_association_operators_match_ruby_mirror_columns
     ruby_table = build_comment_ruby_table
 
     {
       not_eq: "Technology",
       not_in: ["Technology"],
-      not_contains: "Tech"
+      not_contains: "Tech",
+      not_icontains: "tech"
     }.each do |operator, value|
       sql_result = result_for(@table, query_filter(:post_parent_category, operator, value))
       ruby_result = result_for(ruby_table, query_filter(:parent_category_name_ruby, operator, value))
@@ -350,7 +372,8 @@ class TestFilteringEdgeCases < Minitest::Test
     {
       not_eq: "Technology",
       not_in: ["Technology"],
-      not_contains: "Tech"
+      not_contains: "Tech",
+      not_icontains: "teCh"
     }.each do |operator, value|
       assert_comment_bodies(
         result_for(@table, query_filter(:post_parent_category, operator, value)),
@@ -365,7 +388,8 @@ class TestFilteringEdgeCases < Minitest::Test
     {
       not_eq: nil,
       not_in: [nil],
-      not_contains: nil
+      not_contains: nil,
+      not_icontains: nil
     }.each do |operator, value|
       sql_result = result_for(@table, query_filter(:post_parent_category, operator, value))
       ruby_result = result_for(ruby_table, query_filter(:parent_category_name_ruby, operator, value))
@@ -468,6 +492,29 @@ class TestFilteringSqlAndOperator < Minitest::Test
         query_and(
           query_filter(:post_category, :eq, "Ruby"),
           query_filter(:post_parent_category, :eq, "Technology")
+        )
+      )
+    )
+
+    assert_comment_bodies(
+      result_for(@table, filters),
+      [
+        "Great post!",
+        "Love gems",
+        "Puma is great",
+        "Rails is fun"
+      ]
+    )
+  end
+
+  def test_deep_and_filter_can_use_icontains_across_multiple_sql_associations
+    filters = query_and(
+      query_filter(:user_company_name, :eq, "Acme Corp"),
+      query_and(
+        query_filter(:post_author_company_name, :eq, "Acme Corp"),
+        query_and(
+          query_filter(:post_category, :icontains, "rub"),
+          query_filter(:post_parent_category, :icontains, "teCh")
         )
       )
     )
@@ -699,6 +746,21 @@ class TestFilteringRubyAndOperator < Minitest::Test
 
     assert_comment_bodies(result_for(@table, filters), ["Good tip!"])
   end
+
+  def test_deep_and_filter_can_stack_multiple_ruby_predicates_with_icontains
+    filters = query_and(
+      query_filter(:body_upcase, :icontains, "good"),
+      query_and(
+        query_filter(:body_length, :between, [9, 11]),
+        query_and(
+          query_filter(:category_name_ruby, :eq, "Technology"),
+          query_filter(:parent_category_name_ruby, :not_present, nil)
+        )
+      )
+    )
+
+    assert_comment_bodies(result_for(@table, filters), ["Good tip!"])
+  end
 end
 
 class TestFilteringRubyOrOperator < Minitest::Test
@@ -871,6 +933,19 @@ class TestFilteringAll < Minitest::Test
       @table,
       query_and(
         query_filter(:post_parent_category, :contains, "tech"),
+        query_filter(:body_length, :gte, 0)
+      )
+    )
+
+    assert_equal comment_bodies(pure_sql_result), comment_bodies(mixed_result)
+  end
+
+  def test_mixed_and_filter_preserves_icontains_semantics_for_sql_columns
+    pure_sql_result = result_for(@table, query_filter(:post_parent_category, :icontains, "teCh"))
+    mixed_result = result_for(
+      @table,
+      query_and(
+        query_filter(:post_parent_category, :icontains, "teCh"),
         query_filter(:body_length, :gte, 0)
       )
     )

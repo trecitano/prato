@@ -57,15 +57,15 @@ class TestApiQueryColumnFiltering < Minitest::Test
     assert_equal 3, result[:totalCount]
   end
 
-  def test_query_column_array_filter_allowlist_allows_default_filtering
+  def test_query_column_array_filter_allowlist_allows_icontains_default_filtering
     table = Prato.table(Post) do
       column(:title)
-      query_column(author_name: %i[user name], filter: %i[eq contains])
+      query_column(author_name: %i[user name], filter: %i[eq icontains])
     end
 
     result = table.to_table(
       Post.order(:id),
-      params: query_params(filters: query_filter(:author_name, :contains, "Ali"))
+      params: query_params(filters: query_filter(:author_name, :icontains, "ALI"))
     )
 
     assert_equal(["Hello", "Draft", "Ruby tips", "More Ruby"], result[:entries].map { |entry| entry[:title] })

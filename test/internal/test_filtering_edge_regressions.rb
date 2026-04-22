@@ -117,4 +117,51 @@ class TestFilteringContainsParityAcrossMixedEvaluation < Minitest::Test
 
     assert_equal pure_sql, mixed
   end
+
+  def test_icontains_matches_pure_sql_when_mixed_with_a_ruby_filter
+    pure_sql = names_for(@table, query_filter(:name, :icontains, "AL"))
+    mixed = names_for(
+      @table,
+      query_and(
+        query_filter(:name, :icontains, "AL"),
+        query_filter(:always_zero, :eq, 0)
+      )
+    )
+
+    assert_equal pure_sql, mixed
+  end
+
+  def test_not_icontains_matches_pure_sql_when_mixed_with_a_ruby_filter
+    pure_sql = names_for(@table, query_filter(:name, :not_icontains, "AL"))
+    mixed = names_for(
+      @table,
+      query_and(
+        query_filter(:name, :not_icontains, "AL"),
+        query_filter(:always_zero, :eq, 0)
+      )
+    )
+
+    assert_equal pure_sql, mixed
+  end
+end
+
+class TestFilteringIcontainsColumnOnlyColumns < Minitest::Test
+  include FilteringEdgeRegressionHelpers
+
+  def setup
+    @table = Prato.table(User) do
+      column(:name)
+      configure(on_invalid_input: :raise)
+    end
+  end
+
+  def test_icontains_returns_more_rows_than_contains_for_plain_column
+    contains = names_for(@table, query_filter(:name, :contains, "AL"))
+    icontains = names_for(@table, query_filter(:name, :icontains, "AL"))
+
+    skip "plain SQL LIKE is case-insensitive on #{ActiveRecord::Base.connection.adapter_name}" if contains == icontains
+
+    assert_equal [], contains
+    assert_equal ["Alice"], icontains
+  end
 end

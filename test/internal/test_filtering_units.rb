@@ -16,6 +16,8 @@ module FilteringUnitsTestCases
     not_in: { field: :name, value: %w[Alice Dave], expected_names: %w[Bob Carol] },
     contains: { field: :name, value: "li", expected_names: ["Alice"] },
     not_contains: { field: :name, value: "li", expected_names: %w[Bob Carol Dave] },
+    icontains: { field: :name, value: "AL", expected_names: ["Alice"] },
+    not_icontains: { field: :name, value: "AL", expected_names: %w[Bob Carol Dave] },
     between: { field: :age, value: [20, 30], expected_names: %w[Alice Carol] },
     not_between: { field: :age, value: [20, 30], expected_names: %w[Bob Dave] },
     between_exclusive: { field: :age, value: [20, 40], expected_names: %w[Alice Carol] },
@@ -35,6 +37,8 @@ module FilteringUnitsTestCases
     not_in: { field: :post_count, value: [0, 2], expected_names: %w[Alice Carol] },
     contains: { field: :min_post_title, value: "Rails", expected_names: ["Bob"] },
     not_contains: { field: :min_post_title, value: "Rails", expected_names: %w[Alice Carol] },
+    icontains: { field: :min_post_title, value: "rails", expected_names: ["Bob"] },
+    not_icontains: { field: :min_post_title, value: "rails", expected_names: %w[Alice Carol] },
     between: { field: :post_count, value: [2, 3], expected_names: %w[Bob Carol] },
     not_between: { field: :post_count, value: [2, 3], expected_names: %w[Alice Dave] },
     between_exclusive: { field: :post_count, value: [1, 4], expected_names: %w[Bob Carol] },
@@ -54,6 +58,8 @@ module FilteringUnitsTestCases
     not_in: { field: :name_upcase, value: %w[ALICE DAVE], expected_names: %w[Bob Carol] },
     contains: { field: :name_upcase, value: "AL", expected_names: ["Alice"] },
     not_contains: { field: :name_upcase, value: "AL", expected_names: %w[Bob Carol Dave] },
+    icontains: { field: :name_upcase, value: "al", expected_names: ["Alice"] },
+    not_icontains: { field: :name_upcase, value: "al", expected_names: %w[Bob Carol Dave] },
     between: { field: :age_plus_ten, value: [30, 40], expected_names: %w[Alice Carol] },
     not_between: { field: :age_plus_ten, value: [30, 40], expected_names: %w[Bob Dave] },
     between_exclusive: { field: :age_plus_ten, value: [30, 50], expected_names: %w[Alice Carol] },
@@ -73,6 +79,8 @@ module FilteringUnitsTestCases
     not_in: { field: :name_upcase, value: %w[ALICE DAVE], expected_names: %w[Bob Carol] },
     contains: { field: :name_upcase, value: "AL", expected_names: ["Alice"] },
     not_contains: { field: :name_upcase, value: "AL", expected_names: %w[Bob Carol Dave] },
+    icontains: { field: :name_upcase, value: "al", expected_names: ["Alice"] },
+    not_icontains: { field: :name_upcase, value: "al", expected_names: %w[Bob Carol Dave] },
     between: { field: :post_count, value: [2, 3], expected_names: %w[Bob Carol] },
     not_between: { field: :post_count, value: [2, 3], expected_names: %w[Alice Dave] },
     between_exclusive: { field: :post_count, value: [1, 4], expected_names: %w[Bob Carol] },
@@ -92,6 +100,8 @@ module FilteringUnitsTestCases
     not_in: { field: %i[profile name], value: %w[Alice Dave], expected_names: %w[Bob Carol] },
     contains: { field: %i[profile name], value: "li", expected_names: ["Alice"] },
     not_contains: { field: %i[profile name], value: "li", expected_names: %w[Bob Carol Dave] },
+    icontains: { field: %i[profile name], value: "AL", expected_names: ["Alice"] },
+    not_icontains: { field: %i[profile name], value: "AL", expected_names: %w[Bob Carol Dave] },
     between: { field: %i[profile age], value: [20, 30], expected_names: %w[Alice Carol] },
     not_between: { field: %i[profile age], value: [20, 30], expected_names: %w[Bob Dave] },
     between_exclusive: { field: %i[profile age], value: [20, 40], expected_names: %w[Alice Carol] },
@@ -111,6 +121,8 @@ module FilteringUnitsTestCases
     not_in: { field: %i[stats post_count], value: [0, 2], expected_names: %w[Alice Carol] },
     contains: { field: %i[stats min_post_title], value: "Rails", expected_names: ["Bob"] },
     not_contains: { field: %i[stats min_post_title], value: "Rails", expected_names: %w[Alice Carol] },
+    icontains: { field: %i[stats min_post_title], value: "rails", expected_names: ["Bob"] },
+    not_icontains: { field: %i[stats min_post_title], value: "rails", expected_names: %w[Alice Carol] },
     between: { field: %i[stats post_count], value: [2, 3], expected_names: %w[Bob Carol] },
     not_between: { field: %i[stats post_count], value: [2, 3], expected_names: %w[Alice Dave] },
     between_exclusive: { field: %i[stats post_count], value: [1, 4], expected_names: %w[Bob Carol] },
@@ -130,6 +142,8 @@ module FilteringUnitsTestCases
     not_in: { field: %i[computed name_upcase], value: %w[ALICE DAVE], expected_names: %w[Bob Carol] },
     contains: { field: %i[computed name_upcase], value: "AL", expected_names: ["Alice"] },
     not_contains: { field: %i[computed name_upcase], value: "AL", expected_names: %w[Bob Carol Dave] },
+    icontains: { field: %i[computed name_upcase], value: "al", expected_names: ["Alice"] },
+    not_icontains: { field: %i[computed name_upcase], value: "al", expected_names: %w[Bob Carol Dave] },
     between: { field: %i[computed age_plus_ten], value: [30, 40], expected_names: %w[Alice Carol] },
     not_between: { field: %i[computed age_plus_ten], value: [30, 40], expected_names: %w[Bob Dave] },
     between_exclusive: { field: %i[computed age_plus_ten], value: [30, 50], expected_names: %w[Alice Carol] },
@@ -149,6 +163,8 @@ module FilteringUnitsTestCases
     not_in: { field: %i[computed name_upcase], value: %w[ALICE DAVE], expected_names: %w[Bob Carol] },
     contains: { field: %i[computed name_upcase], value: "AL", expected_names: ["Alice"] },
     not_contains: { field: %i[computed name_upcase], value: "AL", expected_names: %w[Bob Carol Dave] },
+    icontains: { field: %i[computed name_upcase], value: "al", expected_names: ["Alice"] },
+    not_icontains: { field: %i[computed name_upcase], value: "al", expected_names: %w[Bob Carol Dave] },
     between: { field: %i[computed post_count], value: [2, 3], expected_names: %w[Bob Carol] },
     not_between: { field: %i[computed post_count], value: [2, 3], expected_names: %w[Alice Dave] },
     between_exclusive: { field: %i[computed post_count], value: [1, 4], expected_names: %w[Bob Carol] },
@@ -302,12 +318,12 @@ class TestFilteringArrayAllowlistDirectColumns < Minitest::Test
 
   def setup
     @table = Prato.table(User) do
-      column(:name, filter: %i[eq contains])
+      column(:name, filter: %i[eq icontains])
     end
   end
 
   def test_allowed_operator_uses_default_filtering
-    assert_filter_names(@table, field: :name, operator: :contains, value: "li", expected_names: ["Alice"])
+    assert_filter_names(@table, field: :name, operator: :icontains, value: "AL", expected_names: ["Alice"])
   end
 
   def test_disallowed_operator_returns_empty_result_by_default
@@ -324,7 +340,7 @@ class TestFilteringArrayAllowlistRubyColumns < Minitest::Test
   def setup
     @table = Prato.table(User) do
       column(:name)
-      ruby_column(:name_upcase, key: :id, filter: %i[eq contains])
+      ruby_column(:name_upcase, key: :id, filter: %i[eq icontains])
 
       ruby_loader(:name_upcase) do |records, _cache|
         index_records_by_id(records) { |user| user.name.upcase }
@@ -333,7 +349,7 @@ class TestFilteringArrayAllowlistRubyColumns < Minitest::Test
   end
 
   def test_allowed_operator_uses_default_ruby_filtering
-    assert_filter_names(@table, field: :name_upcase, operator: :contains, value: "AL", expected_names: ["Alice"])
+    assert_filter_names(@table, field: :name_upcase, operator: :icontains, value: "al", expected_names: ["Alice"])
   end
 
   def test_disallowed_operator_returns_empty_result_by_default

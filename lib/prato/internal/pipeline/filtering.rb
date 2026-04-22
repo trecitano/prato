@@ -61,7 +61,7 @@ module Prato
         end
 
         NIL_ARRAY = [nil].freeze
-        NEGATIVE_ASSC_OPS = %i[not_eq not_in not_contains].freeze
+        NEGATIVE_ASSC_OPS = %i[not_eq not_in not_contains not_icontains].freeze
         def normalize_sql_leaf_filter(spec, filter)
           operator = filter.operator
           value = filter.value
@@ -147,12 +147,10 @@ module Prato
           when :not_present then arel_node.eq(nil)
           when :in          then arel_node.in(Array(value))
           when :not_in      then arel_node.not_in(Array(value))
-          when :contains
-            sanitized = sanitize_like(value.to_s)
-            arel_node.matches("%#{sanitized}%")
-          when :not_contains
-            sanitized = sanitize_like(value.to_s)
-            arel_node.does_not_match("%#{sanitized}%")
+          when :contains      then arel_node.matches(like_pattern(value))
+          when :not_contains  then arel_node.does_not_match(like_pattern(value))
+          when :icontains     then arel_node.matches(like_pattern(value), nil, false)
+          when :not_icontains then arel_node.does_not_match(like_pattern(value), nil, false)
           when :between                 then arel_node.gteq(value[0]).and(arel_node.lteq(value[1]))
           when :not_between             then arel_node.lt(value[0]).or(arel_node.gt(value[1]))
           when :between_exclusive       then arel_node.gt(value[0]).and(arel_node.lt(value[1]))
@@ -228,6 +226,8 @@ module Prato
           when :not_in        then !Array(expected).include?(actual)
           when :contains      then actual.to_s.include?(expected.to_s)
           when :not_contains  then !actual.to_s.include?(expected.to_s)
+          when :icontains     then icontains_match?(actual, expected)
+          when :not_icontains then !icontains_match?(actual, expected)
           when :between       then !actual.nil? && actual >= expected[0] && actual <= expected[1]
           when :not_between   then !actual.nil? && (actual < expected[0] || actual > expected[1])
           when :between_exclusive     then !actual.nil? && actual > expected[0] && actual < expected[1]
@@ -262,6 +262,14 @@ module Prato
           def sanitize_like(value)
             ActiveRecord::Base.sanitize_sql_like(value.to_s)
           end
+        end
+
+        def like_pattern(value)
+          "%#{sanitize_like(value)}%"
+        end
+
+        def icontains_match?(actual, expected)
+          actual.to_s.downcase.include?(expected.to_s.downcase)
         end
       end
     end
