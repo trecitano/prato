@@ -10,9 +10,11 @@ require "tmpdir"
 require "thread"
 
 ROOT = File.expand_path("..", __dir__)
+CI_ROOT = File.join(ROOT, "ci")
 MATRIX_HELPER = File.join(ROOT, "bin", "test-matrix")
 IN_CONTAINER_TASK = "/workspace/bin/run-appraisal-task"
 IMAGE_PREFIX = ENV.fetch("PRATO_MATRIX_IMAGE_PREFIX", "prato-ruby")
+COMPOSE_FILE = File.join(CI_ROOT, "compose.yaml")
 COMPOSE_SERVICES = {
   "pg" => "prato-test-postgres",
   "mysql2" => "prato-test-mysql"
@@ -51,6 +53,36 @@ def system_or_abort(label, command)
   abort_with("command failed: #{Shellwords.join(command)}") unless success
 end
 
+def bundler_version_from_lockfile(lockfile)
+  lockfile_lines = File.readlines(lockfile).map(&:chomp)
+  bundled_at = lockfile_lines.index("BUNDLED WITH")
+  abort_with("Missing BUNDLED WITH in #{lockfile}") unless bundled_at
+
+  bundler_version = lockfile_lines.drop(bundled_at + 1).find { |line| !line.strip.empty? }&.strip
+  abort_with("Missing bundler version in #{lockfile}") unless bundler_version
+  bundler_version
+end
+
+def workspace_gemfile_for(appraisal)
+  File.join(ROOT, "gemfiles", "#{appraisal.tr('-', '_')}.gemfile")
+end
+
+def workspace_lockfile_for(appraisal)
+  "#{workspace_gemfile_for(appraisal)}.lock"
+end
+
+def shell_install_bundler(version)
+  installed_check = Shellwords.escape("exit Gem::Specification.find_all_by_name(\"bundler\", \"#{version}\").any? ? 0 : 1")
+  install_cmd = Shellwords.join(["gem", "install", "bundler", "-v", version, "--no-document"])
+  "ruby -e #{installed_check} || #{install_cmd}"
+end
+
+def shell_bundle_command(gemfile, bundler_version, action)
+  escaped_gemfile = Shellwords.escape(gemfile)
+  escaped_version = Shellwords.escape(bundler_version)
+  "BUNDLE_GEMFILE=#{escaped_gemfile} bundle _#{escaped_version}_ #{action}"
+end
+
 def rows_from_matrix
   JSON.parse(capture_command!(MATRIX_HELPER, "--format=json"))
 end
@@ -64,7 +96,11 @@ def image_tag_for(ruby_version)
 end
 
 def dockerfile_for(ruby_version)
-  File.join(ROOT, "Dockerfile.#{image_family_for(ruby_version)}")
+  File.join(CI_ROOT, "Dockerfile.#{image_family_for(ruby_version)}")
+end
+
+def compose_command(*args)
+  ["docker", "compose", "-f", COMPOSE_FILE, *args]
 end
 
 def image_present?(image_tag)
@@ -94,7 +130,7 @@ def required_compose_services(rows)
 end
 
 def compose_container_id(service)
-  capture_command!("docker", "compose", "ps", "-q", service).strip
+  capture_command!(*compose_command("ps", "-q", service)).strip
 end
 
 def compose_container_state(container_id)
@@ -126,7 +162,7 @@ def ensure_compose_services!(rows)
   services = required_compose_services(rows)
   return if services.empty?
 
-  system_or_abort("Starting database services", ["docker", "compose", "up", "-d", *services])
+  system_or_abort("Starting database services", compose_command("up", "-d", *services))
   services.each { |service| wait_for_service!(service) }
 end
 
@@ -186,15 +222,27 @@ end
 def ensure_bundles!(rows)
   threads = rows.group_by { |row| row.fetch("ruby") }.map do |ruby_version, ruby_rows|
     Thread.new do
-      gemfiles = ruby_rows.map { |row| row.fetch("appraisal") }.uniq.map { |a|
-        "/workspace/gemfiles/#{a.tr('-', '_')}.gemfile"
-      }
+      gemfile_entries = ruby_rows.map { |row| row.fetch("appraisal") }.uniq.map do |appraisal|
+        {
+          gemfile: "/workspace/gemfiles/#{appraisal.tr('-', '_')}.gemfile",
+          bundler_version: bundler_version_from_lockfile(workspace_lockfile_for(appraisal))
+        }
+      end
 
       bundle_cache_dir = bundle_cache_dir_for(ruby_rows.first)
       FileUtils.mkdir_p(bundle_cache_dir)
 
-      check_script = gemfiles.map { |gf| "BUNDLE_GEMFILE=#{gf} bundle check" }.join(" && ")
-      install_script = gemfiles.map { |gf| "BUNDLE_GEMFILE=#{gf} bundle install" }.join(" && ")
+      bootstrap_script = gemfile_entries.map { |entry| entry.fetch(:bundler_version) }.uniq.map {
+        |version| shell_install_bundler(version)
+      }.join(" && ")
+      check_commands = gemfile_entries.map { |entry|
+        shell_bundle_command(entry.fetch(:gemfile), entry.fetch(:bundler_version), "check")
+      }
+      install_commands = gemfile_entries.map { |entry|
+        shell_bundle_command(entry.fetch(:gemfile), entry.fetch(:bundler_version), "install")
+      }
+      check_script = ([bootstrap_script] + check_commands).reject(&:empty?).join(" && ")
+      install_script = ([bootstrap_script] + install_commands).reject(&:empty?).join(" && ")
 
       puts "Checking gem install for #{ruby_version}"
 

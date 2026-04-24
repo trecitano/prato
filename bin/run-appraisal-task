@@ -8,6 +8,24 @@ def abort_with(message)
   exit 1
 end
 
+def bundler_version_from_lockfile(lockfile)
+  lockfile_lines = File.readlines(lockfile).map(&:chomp)
+  bundled_at = lockfile_lines.index("BUNDLED WITH")
+  abort_with("Missing BUNDLED WITH in #{lockfile}") unless bundled_at
+
+  bundler_version = lockfile_lines.drop(bundled_at + 1).find { |line| !line.strip.empty? }&.strip
+  abort_with("Missing bundler version in #{lockfile}") unless bundler_version
+  bundler_version
+end
+
+def ensure_bundler_installed!(bundler_version)
+  return if Gem::Specification.find_all_by_name("bundler", bundler_version).any?
+
+  warn "Installing bundler #{bundler_version}"
+  success = system("ruby", "-S", "gem", "install", "bundler", "-v", bundler_version, "--no-document")
+  abort_with("Failed to install bundler #{bundler_version}") unless success
+end
+
 action = ARGV[0].to_s
 appraisal = ARGV[1].to_s
 
@@ -45,11 +63,8 @@ test_db_mode = case action
                  end
                end
 
-lockfile_lines = File.readlines(lockfile).map(&:chomp)
-bundled_at = lockfile_lines.index("BUNDLED WITH")
-abort_with("Missing BUNDLED WITH in #{lockfile}") unless bundled_at
-bundler_version = lockfile_lines.drop(bundled_at + 1).find { |l| !l.strip.empty? }&.strip
-abort_with("Missing bundler version in #{lockfile}") unless bundler_version
+bundler_version = bundler_version_from_lockfile(lockfile)
+ensure_bundler_installed!(bundler_version)
 bundle_cmd = ["ruby", "-S", "bundle", "_#{bundler_version}_"]
 
 env = {

@@ -4,7 +4,7 @@
 require "json"
 
 ROOT = File.expand_path("..", __dir__)
-MATRIX_PATH = File.join(ROOT, "test_matrix.json")
+MATRIX_PATH = File.join(ROOT, "ci", "test_matrix.json")
 VALID_DBS = %w[sqlite3 pg mysql2].freeze
 VALID_FORMATS = %w[tsv json].freeze
 
