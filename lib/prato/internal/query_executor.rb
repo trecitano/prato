@@ -25,6 +25,33 @@ module Prato
         }
       end
 
+      def execute_in_batches(scope, spec, raw_params:, batch_size:)
+        config = spec.config
+        params = resolve_parameters(raw_params, config, spec)
+
+        materialization_fields = spec.validate_and_extract_materialization_fields(params)
+        if materialization_fields.nil?
+          raise ArgumentError if config.on_invalid_input == :raise
+
+          return
+        end
+
+        base_query_state = QueryState.create(scope, materialization_fields)
+        filtered_query = Pipeline::Filtering.filter_query(base_query_state, spec, params&.filters)
+
+        if filtered_query.unmaterialized?
+          filtered_query.dataset.in_batches(of: batch_size) do |relation|
+            batch_state = filtered_query.with_dataset(relation)
+            yield Pipeline::Serializer.serialize_query(batch_state, spec, params&.fields)
+          end
+        else
+          filtered_query.dataset.each_slice(batch_size) do |slice|
+            batch_state = filtered_query.with_dataset(slice)
+            yield Pipeline::Serializer.serialize_query(batch_state, spec, params&.fields)
+          end
+        end
+      end
+
       private
 
       def resolve_parameters(input, config, spec)

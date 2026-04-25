@@ -23,5 +23,17 @@ module Prato
         paginated: false
       )
     end
+
+    def batches(scope, params: nil, batch_size: 1000, &block)
+      return enum_for(:batches, scope, params: params, batch_size: batch_size) unless block
+
+      Internal::QueryExecutor.execute_in_batches(
+        scope,
+        @spec,
+        raw_params: params,
+        batch_size: batch_size,
+        &block
+      )
+    end
   end
 end
