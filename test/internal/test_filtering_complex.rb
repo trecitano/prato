@@ -212,7 +212,7 @@ module FilteringComplexHelpers
   end
 
   def result_for(table, filters)
-    table.to_table(Comment.order(:id), params: query_params(filters: filters))
+    table.full(Comment.order(:id), params: query_params(filters: filters))
   end
 
   def all_comment_bodies

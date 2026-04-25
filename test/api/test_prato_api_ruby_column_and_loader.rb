@@ -3,7 +3,7 @@
 require "test_helper"
 module TestPratoApiRubyColumn
   def validate(table, key)
-    result = table.to_table(Company.all)
+    result = table.full(Company.all)
     assert_equal(
       [
         { key => "tested" },
@@ -24,7 +24,7 @@ class TestApiRubyColumnSingleArgumentWithBlock < Minitest::Test
       end
     end
 
-    result = table.to_table(Company.all)
+    result = table.full(Company.all)
     assert_equal(
       [
         { output: "tested: 1" },
@@ -40,7 +40,7 @@ class TestApiRubyColumnSingleArgumentWithBlock < Minitest::Test
       end
     end
 
-    result = table.to_table(Company.all)
+    result = table.full(Company.all)
     assert_equal(
       [
         { "Fabulous Output": "tested: 1" },
@@ -56,7 +56,7 @@ class TestApiRubyColumnSingleArgumentWithBlock < Minitest::Test
       end
     end
 
-    result = table.to_table(Company.all)
+    result = table.full(Company.all)
     assert_equal(
       [
         { outputName: "tested: 1" },
@@ -72,7 +72,7 @@ class TestApiRubyColumnSingleArgumentWithBlock < Minitest::Test
       end
     end
 
-    result = table.to_table(Company.all)
+    result = table.full(Company.all)
     assert_equal(
       [
         { "The Output": "tested: 1" },
@@ -93,7 +93,7 @@ class TestApiRubyColumnSingleArgumentWithLoader < Minitest::Test
       end
     end
 
-    result = table.to_table(Company.all)
+    result = table.full(Company.all)
     assert_equal(
       [
         { output: "tested: 1" },
@@ -110,7 +110,7 @@ class TestApiRubyColumnSingleArgumentWithLoader < Minitest::Test
       end
     end
 
-    result = table.to_table(Company.all)
+    result = table.full(Company.all)
     assert_equal(
       [
         { "Fabulous Output": "tested: 1" },
@@ -127,7 +127,7 @@ class TestApiRubyColumnSingleArgumentWithLoader < Minitest::Test
       end
     end
 
-    result = table.to_table(Company.all)
+    result = table.full(Company.all)
     assert_equal(
       [
         { outputName: "tested: 1" },
@@ -144,7 +144,7 @@ class TestApiRubyColumnSingleArgumentWithLoader < Minitest::Test
       end
     end
 
-    result = table.to_table(Company.all)
+    result = table.full(Company.all)
     assert_equal(
       [
         { "The Output": "tested: 1" },
@@ -256,7 +256,7 @@ class TestApiRubyColumnTwoArgumentsWithBlock < Minitest::Test
       end
     end
 
-    result = table.to_table(Company.all)
+    result = table.full(Company.all)
     assert_equal(
       [
         { veryNiceOutput: "tested: 1" },
@@ -272,7 +272,7 @@ class TestApiRubyColumnTwoArgumentsWithBlock < Minitest::Test
       end
     end
 
-    result = table.to_table(Company.all)
+    result = table.full(Company.all)
     assert_equal(
       [
         { "Fabulous Output": "tested: 1" },
@@ -293,7 +293,7 @@ class TestApiRubyColumnTwoArgumentsWithLoader < Minitest::Test
       end
     end
 
-    result = table.to_table(Company.all)
+    result = table.full(Company.all)
     assert_equal(
       [
         { veryNiceOutput: "tested: 1" },
@@ -310,7 +310,7 @@ class TestApiRubyColumnTwoArgumentsWithLoader < Minitest::Test
       end
     end
 
-    result = table.to_table(Company.all)
+    result = table.full(Company.all)
     assert_equal(
       [
         { "Fabulous Output": "tested: 1" },
@@ -403,7 +403,7 @@ class TestApiRubyColumn < Minitest::Test
       end
     end
 
-    result = table.to_table(User.all)
+    result = table.full(User.all)
     assert_equal(
       [
         {companyStuff: "I am company Acme Corp", numberCompanies: 2 },
@@ -427,7 +427,7 @@ class TestApiRubyColumn < Minitest::Test
       end
     end
 
-    result = table.to_table(User.all)
+    result = table.full(User.all)
     assert_equal(
       [
         { numberCompanies: 2 },
@@ -480,7 +480,7 @@ class TestApiRubyColumnIncludes < Minitest::Test
     end
 
     assert_select_query_count(2) do
-      result = table.to_table(User.order(:id))
+      result = table.full(User.order(:id))
 
       assert_equal ["Acme Corp", "Acme Corp", "Globex", nil], result[:entries].map { |entry| entry[:companyName] }
     end
@@ -493,7 +493,7 @@ class TestApiRubyColumnIncludes < Minitest::Test
       end
     end
 
-    result = table.to_table(User.order(:id))
+    result = table.full(User.order(:id))
 
     assert_equal ["Acme Corp", "Acme Corp", "Globex", nil], result[:entries].map { |entry| entry[:companyName] }
   end
@@ -509,7 +509,7 @@ class TestApiRubyColumnIncludes < Minitest::Test
       end
     end
 
-    result = table.to_table(Comment.order(:id))
+    result = table.full(Comment.order(:id))
 
     assert_equal [
       "Bob / Acme Corp",
@@ -531,7 +531,7 @@ class TestApiRubyLoaderIncludes < Minitest::Test
     end
 
     assert_select_query_count(2) do
-      result = table.to_table(User.order(:id))
+      result = table.full(User.order(:id))
 
       assert_equal ["Acme Corp", "Acme Corp", "Globex", nil], result[:entries].map { |entry| entry[:companyName] }
     end

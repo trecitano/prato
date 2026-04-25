@@ -6,11 +6,11 @@ module SortingUnitsTestHelper
   private
 
   def names_for(table, scope: User.all, params: nil)
-    table.to_table(scope, params: params)[:entries].map { |entry| entry[:name] }
+    table.full(scope, params: params)[:entries].map { |entry| entry[:name] }
   end
 
   def titles_for(table, scope: Post.all, params: nil)
-    table.to_table(scope, params: params)[:entries].map { |entry| entry[:title] }
+    table.full(scope, params: params)[:entries].map { |entry| entry[:title] }
   end
 
   def sorted_names(table, *sorts, scope: User.all, **sort)
@@ -244,7 +244,7 @@ class TestSortingRubyColumnIncludes < Minitest::Test
       end
     end
 
-    result = table.to_table(
+    result = table.full(
       User.order(:id),
       params: query_params(fields: :name, sorts: [query_sort(:company_name, :asc), query_sort(:name, :asc)])
     )
@@ -263,7 +263,7 @@ class TestSortingQueryOnlyColumnsAndValidation < Minitest::Test
       query_column(author_name: %i[user name])
     end
 
-    result = table.to_table(
+    result = table.full(
       Post.all,
       params: query_params(sorts: [query_sort(:author_name, :asc), query_sort(:title, :asc)])
     )
@@ -290,7 +290,7 @@ class TestSortingQueryOnlyColumnsAndValidation < Minitest::Test
       column(:name, only: :display)
     end
 
-    result = table.to_table(
+    result = table.full(
       User.all,
       params: query_params(sorts: [query_sort(:name, :asc)])
     )
@@ -306,7 +306,7 @@ class TestSortingQueryOnlyColumnsAndValidation < Minitest::Test
     end
 
     assert_raises(ArgumentError) do
-      table.to_table(
+      table.full(
         User.all,
         params: query_params(sorts: [query_sort(:name, :asc)])
       )

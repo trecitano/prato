@@ -9,7 +9,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
       query_column(author_name: %i[user name])
     end
 
-    result = table.to_table(
+    result = table.full(
       Post.order(:id),
       params: query_params(filters: query_filter(:author_name, :eq, "Alice"))
     )
@@ -24,7 +24,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
       query_column(tag_name: %i[tags name])
     end
 
-    result = table.to_page(
+    result = table.page(
       Post.order(:id),
       params: query_params(page: 1, per_page: 10, filters: query_filter(:tag_name, :in, %w[rails ruby]))
     )
@@ -41,7 +41,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
       column(tag_name: %i[tags name])
     end
 
-    result = table.to_page(
+    result = table.page(
       Post.order(:id),
       params: query_params(
         page: 1,
@@ -63,7 +63,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
       query_column(author_name: %i[user name], filter: %i[eq icontains])
     end
 
-    result = table.to_table(
+    result = table.full(
       Post.order(:id),
       params: query_params(filters: query_filter(:author_name, :icontains, "ALI"))
     )
@@ -77,7 +77,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
       query_column(author_name: %i[user name], filter: %i[eq])
     end
 
-    result = table.to_table(
+    result = table.full(
       Post.order(:id),
       params: query_params(filters: query_filter(:author_name, :contains, "Ali"))
     )
@@ -93,7 +93,7 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
       column(:name, only: :display)
     end
 
-    result = table.to_table(
+    result = table.full(
       User.order(:id),
       params: query_params(filters: query_filter(:name, :eq, "Alice"))
     )
@@ -107,7 +107,7 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
       column(:name, only: :display, filter: [:eq])
     end
 
-    result = table.to_table(
+    result = table.full(
       User.order(:id),
       params: query_params(filters: query_filter(:name, :eq, "Alice"))
     )
@@ -122,7 +122,7 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
       column(:name, filter: [:eq])
     end
 
-    result = table.to_table(
+    result = table.full(
       User.order(:id),
       params: query_params(filters: query_filter(:name, :eq, "Alice"))
     )
@@ -138,7 +138,7 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
     end
 
     assert_raises(ArgumentError) do
-      table.to_table(
+      table.full(
         User.order(:id),
         params: query_params(filters: query_filter(:name, :eq, "Alice"))
       )
@@ -152,7 +152,7 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
     end
 
     assert_raises(ArgumentError) do
-      table.to_table(
+      table.full(
         User.order(:id),
         params: query_params(filters: query_filter(:name, :contains, "Ali"))
       )

@@ -5,19 +5,19 @@ require "test_helper"
 module TestPratoApiColumn
   def validate(table, key)
     scope = User.where(name: "Alice")
-    output = table.to_table(scope)
+    output = table.full(scope)
     assert_equal "Alice", output[:entries].first[key]
   end
 
   def validate_with_result(table, key, result)
     scope = User.where(name: "Alice")
-    output = table.to_table(scope)
+    output = table.full(scope)
     assert_equal result, output[:entries].first[key]
   end
 
   def validate_avg_result(table, key, result)
     scope = User.where(name: "Alice")
-    output = table.to_table(scope)
+    output = table.full(scope)
     assert_in_delta result, output[:entries].first[key].to_f, 0.01
   end
 end
@@ -291,7 +291,7 @@ class TestApiColumnCount < Minitest::Test
     end
 
     scope = Company.where(name: "Acme Corp")
-    output = table.to_table(scope)
+    output = table.full(scope)
     assert_equal 16, output[:entries].first[:commentCount]
   end
 end
@@ -369,7 +369,7 @@ class TestApiColumnSum < Minitest::Test
     end
 
     scope = Company.where(name: "Acme Corp")
-    output = table.to_table(scope)
+    output = table.full(scope)
     assert_equal 48, output[:entries].first[:sumCommentScore]
   end
 end
@@ -447,7 +447,7 @@ class TestApiColumnAvg < Minitest::Test
     end
 
     scope = Company.where(name: "Acme Corp")
-    output = table.to_table(scope)
+    output = table.full(scope)
     assert_in_delta 3.0, output[:entries].first[:avgCommentScore].to_f, 0.01
   end
 end
@@ -525,7 +525,7 @@ class TestApiColumnMin < Minitest::Test
     end
 
     scope = Company.where(name: "Acme Corp")
-    output = table.to_table(scope)
+    output = table.full(scope)
     assert_equal 1, output[:entries].first[:minCommentScore]
   end
 end
@@ -603,7 +603,7 @@ class TestApiColumnMax < Minitest::Test
     end
 
     scope = Company.where(name: "Acme Corp")
-    output = table.to_table(scope)
+    output = table.full(scope)
     assert_equal 5, output[:entries].first[:maxCommentScore]
   end
 end

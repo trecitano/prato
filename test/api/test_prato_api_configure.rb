@@ -20,7 +20,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
       column(:post_count, :name)
     end
 
-    output = table.to_table(User.where(name: "Alice"))
+    output = table.full(User.where(name: "Alice"))
     assert_equal "Alice", output[:entries].first[:postCount]
   end
 
@@ -29,7 +29,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
       column(:"kebaB-Case99 yEs", :name)
     end
 
-    output = table.to_table(User.all)
+    output = table.full(User.all)
     assert_equal :kebaBCase99YEs, output[:entries].first.keys.first
   end
 
@@ -39,7 +39,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
       column(:postCount, :name)
     end
 
-    output = table.to_table(User.all)
+    output = table.full(User.all)
     assert_equal :post_count, output[:entries].first.keys.first
   end
 
@@ -49,7 +49,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
       column(:post_count, :name)
     end
 
-    output = table.to_table(User.all)
+    output = table.full(User.all)
     assert_equal :post_count, output[:entries].first.keys.first
   end
 
@@ -60,7 +60,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
     end
 
 
-    output = table.to_table(User.all)
+    output = table.full(User.all)
     assert_equal :keba_b_case99_y_es, output[:entries].first.keys.first
   end
 
@@ -70,7 +70,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
       column(:post_count, :name)
     end
 
-    output = table.to_table(User.all)
+    output = table.full(User.all)
     assert_equal :post_count, output[:entries].first.keys.first
   end
 
@@ -80,7 +80,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
       column(:PostCount, :name)
     end
 
-    output = table.to_table(User.all)
+    output = table.full(User.all)
     assert_equal :PostCount, output[:entries].first.keys.first
   end
 
@@ -90,7 +90,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
       column(:"kebaB-Case", :name)
     end
 
-    output = table.to_table(User.all)
+    output = table.full(User.all)
     assert_equal :"kebaB-Case", output[:entries].first.keys.first
   end
 

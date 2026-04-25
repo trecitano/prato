@@ -6,7 +6,7 @@ module TestDisplayFields
   private
 
   def alice_entry(table, params: nil)
-    table.to_table(User.where(name: "Alice"), params: params)[:entries].first
+    table.full(User.where(name: "Alice"), params: params)[:entries].first
   end
 
   def build_mixed_user_table
@@ -65,7 +65,7 @@ class TestDisplayFieldsSelection < Minitest::Test
   def test_requested_fields_limit_output_after_ruby_filter_materialization
     table = build_mixed_user_table
 
-    result = table.to_table(
+    result = table.full(
       User.all,
       params: query_params(
         fields: [query_field_path(:name), query_field_path(:age_plus_ten), query_field_path(:post_count)],
@@ -88,7 +88,7 @@ class TestDisplayFieldsSelection < Minitest::Test
   def test_requested_fields_limit_output_after_ruby_sort_materialization
     table = build_mixed_user_table
 
-    result = table.to_table(
+    result = table.full(
       User.order(:id),
       params: query_params(
         fields: [query_field_path(:name), query_field_path(:age_plus_ten)],
@@ -110,7 +110,7 @@ class TestDisplayFieldsSelection < Minitest::Test
   def test_requested_section_fields_limit_output_after_ruby_filter_materialization
     table = build_mixed_user_section_table
 
-    result = table.to_table(
+    result = table.full(
       User.all,
       params: query_params(
         fields: [query_field_path(:name), query_field_path(:profile, :age_plus_ten),
@@ -162,7 +162,7 @@ class TestDisplayFieldsValidation < Minitest::Test
       query_column(author_name: %i[user name])
     end
 
-    result = table.to_table(
+    result = table.full(
       Post.order(:id),
       params: query_params(fields: [query_field_path(:title), query_field_path(:author_name)])
     )
@@ -179,7 +179,7 @@ class TestDisplayFieldsValidation < Minitest::Test
     end
 
     assert_raises(ArgumentError) do
-      table.to_table(
+      table.full(
         Post.order(:id),
         params: query_params(fields: [query_field_path(:title), query_field_path(:author_name)])
       )
@@ -191,7 +191,7 @@ class TestDisplayFieldsValidation < Minitest::Test
       column(:name)
     end
 
-    result = table.to_table(
+    result = table.full(
       User.order(:id),
       params: query_params(fields: [query_field_path(:name), query_field_path(:unknown_field)])
     )

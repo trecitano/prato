@@ -18,14 +18,14 @@ module SortingComplexHelpers
   private
 
   def names_for(table, scope: User.all, params: nil)
-    table.to_table(scope, params: params)[:entries].map { |entry| entry[:name] }
+    table.full(scope, params: params)[:entries].map { |entry| entry[:name] }
   end
 
   def titles_for(table, scope: Post.all, params: nil, paginated: false)
     result = if paginated
-               table.to_page(scope, params: params)
+               table.page(scope, params: params)
              else
-               table.to_table(scope, params: params)
+               table.full(scope, params: params)
              end
 
     [result[:entries].map { |entry| entry[:title] }, result]
@@ -120,7 +120,7 @@ class TestSortingAfterRubyFiltering < Minitest::Test
       ruby_column(:company_name, key: :id, includes: :company, &company_name_loader_proc)
     end
 
-    result = table.to_table(
+    result = table.full(
       User.all,
       params: query_params(
         filters: query_filter(:company_name, :present, nil),
@@ -141,7 +141,7 @@ class TestSortingAfterRubyFiltering < Minitest::Test
       ruby_column(:company_name, key: :id, includes: :company, &company_name_loader_proc)
     end
 
-    result = table.to_table(
+    result = table.full(
       User.all,
       params: query_params(
         filters: query_filter(:company_name, :present, nil),

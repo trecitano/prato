@@ -183,7 +183,7 @@ module FilteringUnitsTestHelper
   end
 
   def filtered_result(table, field, operator, value)
-    table.to_table(
+    table.full(
       User.order(:id),
       params: query_params(filters: query_filter(field, operator, value))
     )
@@ -373,7 +373,7 @@ class TestFilteringRubyColumnIncludes < Minitest::Test
   end
 
   def test_ruby_filter_can_use_includes_when_filter_field_is_not_displayed
-    result = @table.to_table(
+    result = @table.full(
       User.order(:id),
       params: query_params(fields: :name, filters: query_filter(:company_name, :eq, "Acme Corp"))
     )

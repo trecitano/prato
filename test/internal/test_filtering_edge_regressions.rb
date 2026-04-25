@@ -6,7 +6,7 @@ module FilteringEdgeRegressionHelpers
   private
 
   def names_for(table, filters)
-    table.to_table(
+    table.full(
       User.order(:id),
       params: query_params(filters: filters)
     )[:entries].map { |entry| entry[:name] }

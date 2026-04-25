@@ -6,15 +6,15 @@ module TestPratoApiSection
   private
 
   def alice_entry(table)
-    table.to_table(User.where(name: "Alice"))[:entries].first
+    table.full(User.where(name: "Alice"))[:entries].first
   end
 
   def names_for(table, scope: User.all, params: nil)
-    table.to_table(scope, params: params)[:entries].map { |entry| entry[:name] }
+    table.full(scope, params: params)[:entries].map { |entry| entry[:name] }
   end
 
   def titles_for(table, scope: Post.all, params: nil)
-    table.to_table(scope, params: params)[:entries].map { |entry| entry[:title] }
+    table.full(scope, params: params)[:entries].map { |entry| entry[:title] }
   end
 end
 
@@ -66,7 +66,7 @@ class TestApiSectionSerialization < Minitest::Test
       end
     end
 
-    entry = table.to_table(Comment.order(:id).limit(1))[:entries].first
+    entry = table.full(Comment.order(:id).limit(1))[:entries].first
 
     assert_equal(
       {
@@ -165,7 +165,7 @@ class TestApiSectionQuerying < Minitest::Test
       end
     end
 
-    result = table.to_table(
+    result = table.full(
       User.order(:id),
       params: {
         filters: [{ field: "profile.companyName", operator: "eq", value: "Acme Corp" }]

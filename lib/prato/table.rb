@@ -6,7 +6,7 @@ module Prato
       @spec = spec
     end
 
-    def to_page(scope, params: nil)
+    def page(scope, params: nil)
       Internal::QueryExecutor.execute(
         scope,
         @spec,
@@ -15,7 +15,7 @@ module Prato
       )
     end
 
-    def to_table(scope, params: nil)
+    def full(scope, params: nil)
       Internal::QueryExecutor.execute(
         scope,
         @spec,
