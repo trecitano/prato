@@ -6,11 +6,11 @@ module Prato
   module Query
     class DefaultParser
       def parse_parameters(input, field_lookup)
-        page = hash_access(input, "page")
-        per_page = hash_access(input, "per_page")
-        filters = hash_access(input, "filters")
-        sorts = hash_access(input, "sorts")
-        fields = hash_access(input, "fields")
+        page = extract_page(input)
+        per_page = extract_per_page(input)
+        filters = extract_filters(input)
+        sorts = extract_sorts(input)
+        fields = extract_fields(input)
 
         Prato::Query::Parameters.new(
           page: parse_page(page),
@@ -21,12 +21,24 @@ module Prato
         )
       end
 
+      def extract_page(input)
+        hash_access(input, "page")
+      end
+
       def parse_page(raw_value)
         safe_parse_integer(raw_value)
       end
 
+      def extract_per_page(input)
+        hash_access(input, "per_page")
+      end
+
       def parse_per_page(raw_value)
         safe_parse_integer(raw_value)
+      end
+
+      def extract_filters(input)
+        hash_access(input, "filters")
       end
 
       def parse_filters(input, field_lookup)
@@ -65,6 +77,10 @@ module Prato
         end.compact
       end
 
+      def extract_sorts(input)
+        hash_access(input, "sorts")
+      end
+
       def parse_sorts(input, field_lookup)
         return nil if input.nil?
 
@@ -79,6 +95,10 @@ module Prato
         end
       end
 
+      def extract_fields(input)
+        hash_access(input, "fields")
+      end
+
       def parse_fields(input, field_lookup)
         return nil if input.nil?
 
@@ -88,8 +108,6 @@ module Prato
           parse_field(entry, field_lookup)
         end
       end
-
-      protected
 
       def parse_field(field, field_resolver)
         fields = field.split(".")
