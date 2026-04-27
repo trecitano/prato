@@ -8,7 +8,7 @@ module TestPratoApiRubyColumn
       [
         { key => "tested" },
         { key => "tested" }
-      ], result[:entries]
+      ], result
     )
   end
 end
@@ -29,7 +29,7 @@ class TestApiRubyColumnSingleArgumentWithBlock < Minitest::Test
       [
         { output: "tested: 1" },
         { output: "tested: 2" }
-      ], result[:entries]
+      ], result
     )
   end
 
@@ -45,7 +45,7 @@ class TestApiRubyColumnSingleArgumentWithBlock < Minitest::Test
       [
         { "Fabulous Output": "tested: 1" },
         { "Fabulous Output": "tested: 2" }
-      ], result[:entries]
+      ], result
     )
   end
 
@@ -61,7 +61,7 @@ class TestApiRubyColumnSingleArgumentWithBlock < Minitest::Test
       [
         { outputName: "tested: 1" },
         { outputName: "tested: 2" }
-      ], result[:entries]
+      ], result
     )
   end
 
@@ -77,7 +77,7 @@ class TestApiRubyColumnSingleArgumentWithBlock < Minitest::Test
       [
         { "The Output": "tested: 1" },
         { "The Output": "tested: 2" }
-      ], result[:entries]
+      ], result
     )
   end
 end
@@ -98,7 +98,7 @@ class TestApiRubyColumnSingleArgumentWithLoader < Minitest::Test
       [
         { output: "tested: 1" },
         { output: "tested: 2" }
-      ], result[:entries]
+      ], result
     )
   end
 
@@ -115,7 +115,7 @@ class TestApiRubyColumnSingleArgumentWithLoader < Minitest::Test
       [
         { "Fabulous Output": "tested: 1" },
         { "Fabulous Output": "tested: 2" }
-      ], result[:entries]
+      ], result
     )
   end
 
@@ -132,7 +132,7 @@ class TestApiRubyColumnSingleArgumentWithLoader < Minitest::Test
       [
         { outputName: "tested: 1" },
         { outputName: "tested: 2" }
-      ], result[:entries]
+      ], result
     )
   end
 
@@ -149,7 +149,7 @@ class TestApiRubyColumnSingleArgumentWithLoader < Minitest::Test
       [
         { "The Output": "tested: 1" },
         { "The Output": "tested: 2" }
-      ], result[:entries]
+      ], result
     )
   end
 end
@@ -261,7 +261,7 @@ class TestApiRubyColumnTwoArgumentsWithBlock < Minitest::Test
       [
         { veryNiceOutput: "tested: 1" },
         { veryNiceOutput: "tested: 2" }
-      ], result[:entries]
+      ], result
     )
   end
 
@@ -277,7 +277,7 @@ class TestApiRubyColumnTwoArgumentsWithBlock < Minitest::Test
       [
         { "Fabulous Output": "tested: 1" },
         { "Fabulous Output": "tested: 2" }
-      ], result[:entries]
+      ], result
     )
   end
 end
@@ -298,7 +298,7 @@ class TestApiRubyColumnTwoArgumentsWithLoader < Minitest::Test
       [
         { veryNiceOutput: "tested: 1" },
         { veryNiceOutput: "tested: 2" }
-      ], result[:entries]
+      ], result
     )
   end
 
@@ -315,7 +315,7 @@ class TestApiRubyColumnTwoArgumentsWithLoader < Minitest::Test
       [
         { "Fabulous Output": "tested: 1" },
         { "Fabulous Output": "tested: 2" }
-      ], result[:entries]
+      ], result
     )
   end
 end
@@ -410,7 +410,7 @@ class TestApiRubyColumn < Minitest::Test
         {companyStuff: "I am company Acme Corp", numberCompanies: 2 },
         {companyStuff: "I am company Globex", numberCompanies: 2 },
         {companyStuff: nil, numberCompanies: 2}],
-      result[:entries]
+      result
     )
   end
 
@@ -434,7 +434,7 @@ class TestApiRubyColumn < Minitest::Test
         { numberCompanies: 2 },
         { numberCompanies: 2 },
         { numberCompanies: 2 }
-      ], result[:entries]
+      ], result
     )
   end
 end
@@ -482,7 +482,7 @@ class TestApiRubyColumnIncludes < Minitest::Test
     assert_select_query_count(2) do
       result = table.full(User.order(:id))
 
-      assert_equal ["Acme Corp", "Acme Corp", "Globex", nil], result[:entries].map { |entry| entry[:companyName] }
+      assert_equal ["Acme Corp", "Acme Corp", "Globex", nil], result.map { |entry| entry[:companyName] }
     end
   end
 
@@ -495,7 +495,7 @@ class TestApiRubyColumnIncludes < Minitest::Test
 
     result = table.full(User.order(:id))
 
-    assert_equal ["Acme Corp", "Acme Corp", "Globex", nil], result[:entries].map { |entry| entry[:companyName] }
+    assert_equal ["Acme Corp", "Acme Corp", "Globex", nil], result.map { |entry| entry[:companyName] }
   end
 
   def test_ruby_column_includes_support_nested_rails_shapes_with_loader
@@ -515,7 +515,7 @@ class TestApiRubyColumnIncludes < Minitest::Test
       "Bob / Acme Corp",
       "Carol / Acme Corp",
       "Dave / Acme Corp"
-    ], result[:entries].first(3).map { |entry| entry[:commentContext] }
+    ], result.first(3).map { |entry| entry[:commentContext] }
   end
 
 end
@@ -533,7 +533,7 @@ class TestApiRubyLoaderIncludes < Minitest::Test
     assert_select_query_count(2) do
       result = table.full(User.order(:id))
 
-      assert_equal ["Acme Corp", "Acme Corp", "Globex", nil], result[:entries].map { |entry| entry[:companyName] }
+      assert_equal ["Acme Corp", "Acme Corp", "Globex", nil], result.map { |entry| entry[:companyName] }
     end
   end
 

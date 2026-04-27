@@ -18,17 +18,17 @@ module SortingComplexHelpers
   private
 
   def names_for(table, scope: User.all, params: nil)
-    table.full(scope, params)[:entries].map { |entry| entry[:name] }
+    table.full(scope, params).map { |entry| entry[:name] }
   end
 
   def titles_for(table, scope: Post.all, params: nil, paginated: false)
-    result = if paginated
-               table.page(scope, params)
-             else
-               table.full(scope, params)
-             end
-
-    [result[:entries].map { |entry| entry[:title] }, result]
+    if paginated
+      result = table.page(scope, params)
+      [result[:entries].map { |entry| entry[:title] }, result]
+    else
+      result = table.full(scope, params)
+      [result.map { |entry| entry[:title] }, result]
+    end
   end
 
   def company_name_loader
@@ -128,8 +128,8 @@ class TestSortingAfterRubyFiltering < Minitest::Test
       )
     )
 
-    assert_equal(%w[Bob Carol Alice], result[:entries].map { |entry| entry[:name] })
-    assert(result[:entries].all? { |entry| entry.keys == %i[name companyName] })
+    assert_equal(%w[Bob Carol Alice], result.map { |entry| entry[:name] })
+    assert(result.all? { |entry| entry.keys == %i[name companyName] })
   end
 
   def test_query_only_aggregate_sort_remains_available_after_ruby_filter_materializes_records
@@ -149,8 +149,8 @@ class TestSortingAfterRubyFiltering < Minitest::Test
       )
     )
 
-    assert_equal(%w[Bob Carol Alice], result[:entries].map { |entry| entry[:name] })
-    assert(result[:entries].all? { |entry| entry.keys == %i[name companyName] })
+    assert_equal(%w[Bob Carol Alice], result.map { |entry| entry[:name] })
+    assert(result.all? { |entry| entry.keys == %i[name companyName] })
   end
 end
 

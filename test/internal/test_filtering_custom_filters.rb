@@ -6,13 +6,13 @@ module FilteringCustomHelpers
   private
 
   def assert_names(result, expected_names)
-    assert_equal expected_names.sort, result[:entries].map { |e| e[:name] }.sort
-    assert_equal expected_names.length, result[:totalCount]
+    assert_equal expected_names.sort, result.map { |e| e[:name] }.sort
+    assert_equal expected_names.length, result.length
   end
 
   def assert_bodies(result, expected_bodies)
-    assert_equal expected_bodies.sort, result[:entries].map { |e| e[:body] }.sort
-    assert_equal expected_bodies.length, result[:totalCount]
+    assert_equal expected_bodies.sort, result.map { |e| e[:body] }.sort
+    assert_equal expected_bodies.length, result.length
   end
 
   def result_for(table, scope, filters)

@@ -9,7 +9,7 @@ module FilteringEdgeRegressionHelpers
     table.full(
       User.order(:id),
       query_params(filters: filters)
-    )[:entries].map { |entry| entry[:name] }
+    ).map { |entry| entry[:name] }
   end
 end
 

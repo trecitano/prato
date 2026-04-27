@@ -21,7 +21,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
     end
 
     output = table.full(User.where(name: "Alice"))
-    assert_equal "Alice", output[:entries].first[:postCount]
+    assert_equal "Alice", output.first[:postCount]
   end
 
   def test_camel_case_default_weird_case
@@ -30,7 +30,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
     end
 
     output = table.full(User.all)
-    assert_equal :kebaBCase99YEs, output[:entries].first.keys.first
+    assert_equal :kebaBCase99YEs, output.first.keys.first
   end
 
   def test_snake_case_from_camel
@@ -40,7 +40,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
     end
 
     output = table.full(User.all)
-    assert_equal :post_count, output[:entries].first.keys.first
+    assert_equal :post_count, output.first.keys.first
   end
 
   def test_snake_case_to_snake_case
@@ -50,7 +50,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
     end
 
     output = table.full(User.all)
-    assert_equal :post_count, output[:entries].first.keys.first
+    assert_equal :post_count, output.first.keys.first
   end
 
   def test_snake_case_weird_case
@@ -61,7 +61,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
 
 
     output = table.full(User.all)
-    assert_equal :keba_b_case99_y_es, output[:entries].first.keys.first
+    assert_equal :keba_b_case99_y_es, output.first.keys.first
   end
 
   def test_none_with_snake
@@ -71,7 +71,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
     end
 
     output = table.full(User.all)
-    assert_equal :post_count, output[:entries].first.keys.first
+    assert_equal :post_count, output.first.keys.first
   end
 
   def test_none_with_pascal_case
@@ -81,7 +81,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
     end
 
     output = table.full(User.all)
-    assert_equal :PostCount, output[:entries].first.keys.first
+    assert_equal :PostCount, output.first.keys.first
   end
 
   def test_none_with_random_casing
@@ -91,7 +91,7 @@ class TestApiConfigureKeyTransformation < Minitest::Test
     end
 
     output = table.full(User.all)
-    assert_equal :"kebaB-Case", output[:entries].first.keys.first
+    assert_equal :"kebaB-Case", output.first.keys.first
   end
 
   def test_invalid_key_transformation_raises

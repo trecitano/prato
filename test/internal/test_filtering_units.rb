@@ -178,8 +178,8 @@ module FilteringUnitsTestHelper
   def assert_filter_names(table, field:, operator:, value:, expected_names:)
     result = filtered_result(table, field, operator, value)
 
-    assert_equal expected_names.sort, result[:entries].map { |entry| entry[:name] }.sort
-    assert_equal expected_names.length, result[:totalCount]
+    assert_equal expected_names.sort, result.map { |entry| entry[:name] }.sort
+    assert_equal expected_names.length, result.length
   end
 
   def filtered_result(table, field, operator, value)
@@ -329,8 +329,7 @@ class TestFilteringArrayAllowlistDirectColumns < Minitest::Test
   def test_disallowed_operator_returns_empty_result_by_default
     result = filtered_result(@table, :name, :gt, "Bob")
 
-    assert_equal [], result[:entries]
-    assert_equal 0, result[:totalCount]
+    assert_equal [], result
   end
 end
 
@@ -355,8 +354,7 @@ class TestFilteringArrayAllowlistRubyColumns < Minitest::Test
   def test_disallowed_operator_returns_empty_result_by_default
     result = filtered_result(@table, :name_upcase, :gt, "BOB")
 
-    assert_equal [], result[:entries]
-    assert_equal 0, result[:totalCount]
+    assert_equal [], result
   end
 end
 
@@ -378,8 +376,8 @@ class TestFilteringRubyColumnIncludes < Minitest::Test
       query_params(fields: :name, filters: query_filter(:company_name, :eq, "Acme Corp"))
     )
 
-    assert_equal %w[Alice Bob], result[:entries].map { |entry| entry[:name] }
-    assert_equal 2, result[:totalCount]
+    assert_equal %w[Alice Bob], result.map { |entry| entry[:name] }
+    assert_equal 2, result.length
   end
 end
 

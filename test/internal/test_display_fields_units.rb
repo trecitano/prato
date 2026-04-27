@@ -6,7 +6,7 @@ module TestDisplayFields
   private
 
   def alice_entry(table, params: nil)
-    table.full(User.where(name: "Alice"), params)[:entries].first
+    table.full(User.where(name: "Alice"), params).first
   end
 
   def build_mixed_user_table
@@ -81,7 +81,7 @@ class TestDisplayFieldsSelection < Minitest::Test
           postCount: 4
         }
       ],
-      result[:entries]
+      result
     )
   end
 
@@ -103,7 +103,7 @@ class TestDisplayFieldsSelection < Minitest::Test
         { name: "Carol", agePlusTen: 35 },
         { name: "Dave", agePlusTen: 50 }
       ],
-      result[:entries]
+      result
     )
   end
 
@@ -129,7 +129,7 @@ class TestDisplayFieldsSelection < Minitest::Test
           }
         }
       ],
-      result[:entries]
+      result
     )
   end
 
@@ -167,8 +167,7 @@ class TestDisplayFieldsValidation < Minitest::Test
       query_params(fields: [query_field_path(:title), query_field_path(:author_name)])
     )
 
-    assert_equal [], result[:entries]
-    assert_equal 0, result[:totalCount]
+    assert_equal [], result
   end
 
   def test_requesting_query_only_field_raises_when_invalid_input_is_configured_to_raise
@@ -196,7 +195,6 @@ class TestDisplayFieldsValidation < Minitest::Test
       query_params(fields: [query_field_path(:name), query_field_path(:unknown_field)])
     )
 
-    assert_equal [], result[:entries]
-    assert_equal 0, result[:totalCount]
+    assert_equal [], result
   end
 end

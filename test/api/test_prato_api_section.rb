@@ -6,15 +6,15 @@ module TestPratoApiSection
   private
 
   def alice_entry(table)
-    table.full(User.where(name: "Alice"))[:entries].first
+    table.full(User.where(name: "Alice")).first
   end
 
   def names_for(table, scope: User.all, params: nil)
-    table.full(scope, params)[:entries].map { |entry| entry[:name] }
+    table.full(scope, params).map { |entry| entry[:name] }
   end
 
   def titles_for(table, scope: Post.all, params: nil)
-    table.full(scope, params)[:entries].map { |entry| entry[:title] }
+    table.full(scope, params).map { |entry| entry[:title] }
   end
 end
 
@@ -66,7 +66,7 @@ class TestApiSectionSerialization < Minitest::Test
       end
     end
 
-    entry = table.full(Comment.order(:id).limit(1))[:entries].first
+    entry = table.full(Comment.order(:id).limit(1)).first
 
     assert_equal(
       {
@@ -172,8 +172,8 @@ class TestApiSectionQuerying < Minitest::Test
       }
     )
 
-    assert_equal(%w[Alice Bob], result[:entries].map { |entry| entry[:name] })
-    assert_equal 2, result[:totalCount]
+    assert_equal(%w[Alice Bob], result.map { |entry| entry[:name] })
+    assert_equal 2, result.length
   end
 
   def test_section_fields_can_be_sorted_via_dotted_raw_params

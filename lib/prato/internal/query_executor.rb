@@ -10,19 +10,21 @@ module Prato
         params = resolve_parameters(raw_params, config, spec)
 
         materialization_fields = spec.validate_and_extract_materialization_fields(params)
-        return invalid_input_result(config) if materialization_fields.nil?
+        return invalid_input_result(config, paginated) if materialization_fields.nil?
 
         base_query_state = QueryState.create(scope, materialization_fields)
 
         filtered_query = Pipeline::Filtering.filter_query(base_query_state, spec, params&.filters)
         sorted_query = Pipeline::Sorting.sort_query(filtered_query, spec, params&.sorts)
-        paginated_query = paginated ? Pipeline::Pagination.paginate_query(sorted_query, config, params&.page, params&.per_page) : sorted_query
-        data = Pipeline::Serializer.serialize_query(paginated_query, spec, params&.fields)
 
-        {
-          entries: data,
-          totalCount: paginated ? total_count(sorted_query) : data.count
-        }
+        if paginated
+          paginated_query = Pipeline::Pagination.paginate_query(sorted_query, config, params&.page, params&.per_page)
+          data = Pipeline::Serializer.serialize_query(paginated_query, spec, params&.fields)
+
+          { entries: data, totalCount: total_count(sorted_query) }
+        else
+          Pipeline::Serializer.serialize_query(sorted_query, spec, params&.fields)
+        end
       end
 
       def execute_in_batches(scope, spec, raw_params:, batch_size:)
@@ -61,13 +63,17 @@ module Prato
         config.parameter_parser.parse_parameters(input, Prato::Query::FieldResolver.resolve_context(spec.field_lookup))
       end
 
-      def invalid_input_result(configuration)
+      def invalid_input_result(configuration, paginated)
         raise ArgumentError if configuration.on_invalid_input == :raise
 
-        {
-          entries: [],
-          totalCount: 0
-        }
+        if paginated
+          {
+            entries: [],
+            totalCount: 0
+          }
+        else
+          []
+        end
       end
 
       def total_count(query_state)

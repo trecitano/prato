@@ -14,8 +14,8 @@ class TestApiQueryColumnFiltering < Minitest::Test
       query_params(filters: query_filter(:author_name, :eq, "Alice"))
     )
 
-    assert_equal(["Hello", "Draft", "Ruby tips", "More Ruby"], result[:entries].map { |entry| entry[:title] })
-    assert(result[:entries].all? { |entry| entry.keys == [:title] })
+    assert_equal(["Hello", "Draft", "Ruby tips", "More Ruby"], result.map { |entry| entry[:title] })
+    assert(result.all? { |entry| entry.keys == [:title] })
   end
 
   def test_query_column_has_many_filters_duplicates_rows_or_total_count
@@ -68,7 +68,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
       query_params(filters: query_filter(:author_name, :icontains, "ALI"))
     )
 
-    assert_equal(["Hello", "Draft", "Ruby tips", "More Ruby"], result[:entries].map { |entry| entry[:title] })
+    assert_equal(["Hello", "Draft", "Ruby tips", "More Ruby"], result.map { |entry| entry[:title] })
   end
 
   def test_query_column_array_filter_allowlist_rejects_other_operators
@@ -82,8 +82,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
       query_params(filters: query_filter(:author_name, :contains, "Ali"))
     )
 
-    assert_equal [], result[:entries]
-    assert_equal 0, result[:totalCount]
+    assert_equal [], result
   end
 end
 
@@ -98,8 +97,7 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
       query_params(filters: query_filter(:name, :eq, "Alice"))
     )
 
-    assert_equal [], result[:entries]
-    assert_equal 0, result[:totalCount]
+    assert_equal [], result
   end
 
   def test_display_only_column_with_filter_option_remains_filterable
@@ -112,8 +110,8 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
       query_params(filters: query_filter(:name, :eq, "Alice"))
     )
 
-    assert_equal ["Alice"], result[:entries].map { |entry| entry[:name] }
-    assert_equal 1, result[:totalCount]
+    assert_equal ["Alice"], result.map { |entry| entry[:name] }
+    assert_equal 1, result.length
   end
 
   def test_display_default_only_can_be_overridden_with_filter_option
@@ -127,8 +125,8 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
       query_params(filters: query_filter(:name, :eq, "Alice"))
     )
 
-    assert_equal ["Alice"], result[:entries].map { |entry| entry[:name] }
-    assert_equal 1, result[:totalCount]
+    assert_equal ["Alice"], result.map { |entry| entry[:name] }
+    assert_equal 1, result.length
   end
 
   def test_filtering_on_display_only_column_raises_when_invalid_input_is_configured_to_raise

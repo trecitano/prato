@@ -6,12 +6,12 @@ module FilteringComplexAssertions
   private
 
   def comment_bodies(result)
-    result[:entries].map { |entry| entry[:body] }.sort
+    result.map { |entry| entry[:body] }.sort
   end
 
   def assert_comment_bodies(result, expected_bodies)
-    assert_equal expected_bodies.sort, result[:entries].map { |entry| entry[:body] }.sort
-    assert_equal expected_bodies.length, result[:entries].length
+    assert_equal expected_bodies.sort, result.map { |entry| entry[:body] }.sort
+    assert_equal expected_bodies.length, result.length
   end
 end
 

@@ -6,19 +6,19 @@ module TestPratoApiColumn
   def validate(table, key)
     scope = User.where(name: "Alice")
     output = table.full(scope)
-    assert_equal "Alice", output[:entries].first[key]
+    assert_equal "Alice", output.first[key]
   end
 
   def validate_with_result(table, key, result)
     scope = User.where(name: "Alice")
     output = table.full(scope)
-    assert_equal result, output[:entries].first[key]
+    assert_equal result, output.first[key]
   end
 
   def validate_avg_result(table, key, result)
     scope = User.where(name: "Alice")
     output = table.full(scope)
-    assert_in_delta result, output[:entries].first[key].to_f, 0.01
+    assert_in_delta result, output.first[key].to_f, 0.01
   end
 end
 
@@ -292,7 +292,7 @@ class TestApiColumnCount < Minitest::Test
 
     scope = Company.where(name: "Acme Corp")
     output = table.full(scope)
-    assert_equal 16, output[:entries].first[:commentCount]
+    assert_equal 16, output.first[:commentCount]
   end
 end
 
@@ -370,7 +370,7 @@ class TestApiColumnSum < Minitest::Test
 
     scope = Company.where(name: "Acme Corp")
     output = table.full(scope)
-    assert_equal 48, output[:entries].first[:sumCommentScore]
+    assert_equal 48, output.first[:sumCommentScore]
   end
 end
 
@@ -448,7 +448,7 @@ class TestApiColumnAvg < Minitest::Test
 
     scope = Company.where(name: "Acme Corp")
     output = table.full(scope)
-    assert_in_delta 3.0, output[:entries].first[:avgCommentScore].to_f, 0.01
+    assert_in_delta 3.0, output.first[:avgCommentScore].to_f, 0.01
   end
 end
 
@@ -526,7 +526,7 @@ class TestApiColumnMin < Minitest::Test
 
     scope = Company.where(name: "Acme Corp")
     output = table.full(scope)
-    assert_equal 1, output[:entries].first[:minCommentScore]
+    assert_equal 1, output.first[:minCommentScore]
   end
 end
 
@@ -604,7 +604,7 @@ class TestApiColumnMax < Minitest::Test
 
     scope = Company.where(name: "Acme Corp")
     output = table.full(scope)
-    assert_equal 5, output[:entries].first[:maxCommentScore]
+    assert_equal 5, output.first[:maxCommentScore]
   end
 end
 

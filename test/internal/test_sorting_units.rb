@@ -6,11 +6,11 @@ module SortingUnitsTestHelper
   private
 
   def names_for(table, scope: User.all, params: nil)
-    table.full(scope, params)[:entries].map { |entry| entry[:name] }
+    table.full(scope, params).map { |entry| entry[:name] }
   end
 
   def titles_for(table, scope: Post.all, params: nil)
-    table.full(scope, params)[:entries].map { |entry| entry[:title] }
+    table.full(scope, params).map { |entry| entry[:title] }
   end
 
   def sorted_names(table, *sorts, scope: User.all, **sort)
@@ -249,8 +249,8 @@ class TestSortingRubyColumnIncludes < Minitest::Test
       query_params(fields: :name, sorts: [query_sort(:company_name, :asc), query_sort(:name, :asc)])
     )
 
-    assert_equal %w[Alice Bob Carol Dave], result[:entries].map { |entry| entry[:name] }
-    assert(result[:entries].all? { |entry| entry.keys == [:name] })
+    assert_equal %w[Alice Bob Carol Dave], result.map { |entry| entry[:name] }
+    assert(result.all? { |entry| entry.keys == [:name] })
   end
 end
 
@@ -280,9 +280,9 @@ class TestSortingQueryOnlyColumnsAndValidation < Minitest::Test
         "Market update",
         "Unpublished"
       ],
-      result[:entries].map { |entry| entry[:title] }
+      result.map { |entry| entry[:title] }
     )
-    assert(result[:entries].all? { |entry| entry.keys == [:title] })
+    assert(result.all? { |entry| entry.keys == [:title] })
   end
 
   def test_sorting_on_display_only_column_returns_empty_result_by_default
@@ -295,8 +295,7 @@ class TestSortingQueryOnlyColumnsAndValidation < Minitest::Test
       query_params(sorts: [query_sort(:name, :asc)])
     )
 
-    assert_equal [], result[:entries]
-    assert_equal 0, result[:totalCount]
+    assert_equal [], result
   end
 
   def test_sorting_on_display_only_column_raises_when_invalid_input_is_configured_to_raise
