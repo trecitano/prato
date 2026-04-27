@@ -185,7 +185,7 @@ module FilteringUnitsTestHelper
   def filtered_result(table, field, operator, value)
     table.full(
       User.order(:id),
-      params: query_params(filters: query_filter(field, operator, value))
+      query_params(filters: query_filter(field, operator, value))
     )
   end
 end
@@ -375,7 +375,7 @@ class TestFilteringRubyColumnIncludes < Minitest::Test
   def test_ruby_filter_can_use_includes_when_filter_field_is_not_displayed
     result = @table.full(
       User.order(:id),
-      params: query_params(fields: :name, filters: query_filter(:company_name, :eq, "Acme Corp"))
+      query_params(fields: :name, filters: query_filter(:company_name, :eq, "Acme Corp"))
     )
 
     assert_equal %w[Alice Bob], result[:entries].map { |entry| entry[:name] }

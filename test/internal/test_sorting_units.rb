@@ -6,11 +6,11 @@ module SortingUnitsTestHelper
   private
 
   def names_for(table, scope: User.all, params: nil)
-    table.full(scope, params: params)[:entries].map { |entry| entry[:name] }
+    table.full(scope, params)[:entries].map { |entry| entry[:name] }
   end
 
   def titles_for(table, scope: Post.all, params: nil)
-    table.full(scope, params: params)[:entries].map { |entry| entry[:title] }
+    table.full(scope, params)[:entries].map { |entry| entry[:title] }
   end
 
   def sorted_names(table, *sorts, scope: User.all, **sort)
@@ -246,7 +246,7 @@ class TestSortingRubyColumnIncludes < Minitest::Test
 
     result = table.full(
       User.order(:id),
-      params: query_params(fields: :name, sorts: [query_sort(:company_name, :asc), query_sort(:name, :asc)])
+      query_params(fields: :name, sorts: [query_sort(:company_name, :asc), query_sort(:name, :asc)])
     )
 
     assert_equal %w[Alice Bob Carol Dave], result[:entries].map { |entry| entry[:name] }
@@ -265,7 +265,7 @@ class TestSortingQueryOnlyColumnsAndValidation < Minitest::Test
 
     result = table.full(
       Post.all,
-      params: query_params(sorts: [query_sort(:author_name, :asc), query_sort(:title, :asc)])
+      query_params(sorts: [query_sort(:author_name, :asc), query_sort(:title, :asc)])
     )
 
     assert_equal(
@@ -292,7 +292,7 @@ class TestSortingQueryOnlyColumnsAndValidation < Minitest::Test
 
     result = table.full(
       User.all,
-      params: query_params(sorts: [query_sort(:name, :asc)])
+      query_params(sorts: [query_sort(:name, :asc)])
     )
 
     assert_equal [], result[:entries]
@@ -308,7 +308,7 @@ class TestSortingQueryOnlyColumnsAndValidation < Minitest::Test
     assert_raises(ArgumentError) do
       table.full(
         User.all,
-        params: query_params(sorts: [query_sort(:name, :asc)])
+        query_params(sorts: [query_sort(:name, :asc)])
       )
     end
   end

@@ -7,7 +7,8 @@ module Prato
     @spec: Internal::Specification
 
     def initialize: (Internal::Specification spec) -> void
-    def to_page: (::ActiveRecord::Relation scope, ?params: params_input) -> result
-    def to_table: (::ActiveRecord::Relation scope, ?params: params_input) -> result
+    def page: (::ActiveRecord::Relation scope, ?params_input params) -> result
+    def full: (::ActiveRecord::Relation scope, ?params_input params) -> result
+    def batches: (::ActiveRecord::Relation scope, ?params_input params, ?batch_size: Integer) ?{ (Array[entry]) -> void } -> Enumerator[Array[entry], void]
   end
 end

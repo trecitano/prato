@@ -16,7 +16,7 @@ module FilteringCustomHelpers
   end
 
   def result_for(table, scope, filters)
-    table.full(scope, params: query_params(filters: filters))
+    table.full(scope, query_params(filters: filters))
   end
 end
 

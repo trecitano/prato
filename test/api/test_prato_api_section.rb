@@ -10,11 +10,11 @@ module TestPratoApiSection
   end
 
   def names_for(table, scope: User.all, params: nil)
-    table.full(scope, params: params)[:entries].map { |entry| entry[:name] }
+    table.full(scope, params)[:entries].map { |entry| entry[:name] }
   end
 
   def titles_for(table, scope: Post.all, params: nil)
-    table.full(scope, params: params)[:entries].map { |entry| entry[:title] }
+    table.full(scope, params)[:entries].map { |entry| entry[:title] }
   end
 end
 
@@ -167,7 +167,7 @@ class TestApiSectionQuerying < Minitest::Test
 
     result = table.full(
       User.order(:id),
-      params: {
+      {
         filters: [{ field: "profile.companyName", operator: "eq", value: "Acme Corp" }]
       }
     )

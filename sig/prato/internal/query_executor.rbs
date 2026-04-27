@@ -6,6 +6,7 @@ module Prato
       type result = { entries: Array[entry], totalCount: Integer }
 
       def self.execute: (::ActiveRecord::Relation scope, Specification spec, raw_params: raw_params, ?paginated: bool) -> result
+      def self.execute_in_batches: (::ActiveRecord::Relation scope, Specification spec, raw_params: raw_params, batch_size: Integer) { (Array[entry]) -> void } -> void
 
       private
 

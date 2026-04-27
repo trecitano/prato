@@ -8,7 +8,7 @@ module FilteringEdgeRegressionHelpers
   def names_for(table, filters)
     table.full(
       User.order(:id),
-      params: query_params(filters: filters)
+      query_params(filters: filters)
     )[:entries].map { |entry| entry[:name] }
   end
 end

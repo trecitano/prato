@@ -7,7 +7,7 @@ module BatchingTestHelper
 
   def collect_batches(table, scope: User.all, params: nil, batch_size: 2)
     batches = []
-    table.batches(scope, params: params, batch_size: batch_size) { |batch| batches << batch }
+    table.batches(scope, params, batch_size: batch_size) { |batch| batches << batch }
     batches
   end
 
@@ -112,7 +112,7 @@ class TestBatchingSqlOnlyColumns < Minitest::Test
     assert_raises(ArgumentError) do
       table.batches(
         User.all,
-        params: query_params(fields: [query_field_path(:name), query_field_path(:unknown_field)])
+        query_params(fields: [query_field_path(:name), query_field_path(:unknown_field)])
       ) { |_batch| }
     end
   end

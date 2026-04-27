@@ -119,7 +119,7 @@ class TestCustomParsers < Minitest::Test
   end
 
   def test_default_parser_subclasses_work_when_configured_on_a_table
-    result = user_table(FictionalSearchPageParser.new).page(User.all, params: SEARCH_PAGE_TABLE_INPUT)
+    result = user_table(FictionalSearchPageParser.new).page(User.all, SEARCH_PAGE_TABLE_INPUT)
 
     assert_equal %w[Alice Bob], result_names(result)
     assert_equal [30, 17], result_ages(result)
@@ -127,7 +127,7 @@ class TestCustomParsers < Minitest::Test
   end
 
   def test_reimplemented_parsers_work_when_configured_on_a_table
-    result = user_table(FictionalMinimalParser.new).page(User.all, params: MINIMAL_TABLE_INPUT)
+    result = user_table(FictionalMinimalParser.new).page(User.all, MINIMAL_TABLE_INPUT)
 
     assert_equal %w[Dave Alice Carol], result_names(result)
     assert_equal [40, 30, 25], result_ages(result)

@@ -6,7 +6,7 @@ module TestDisplayFields
   private
 
   def alice_entry(table, params: nil)
-    table.full(User.where(name: "Alice"), params: params)[:entries].first
+    table.full(User.where(name: "Alice"), params)[:entries].first
   end
 
   def build_mixed_user_table
@@ -67,7 +67,7 @@ class TestDisplayFieldsSelection < Minitest::Test
 
     result = table.full(
       User.all,
-      params: query_params(
+      query_params(
         fields: [query_field_path(:name), query_field_path(:age_plus_ten), query_field_path(:post_count)],
         filters: query_filter(:name_upcase, :eq, "ALICE")
       )
@@ -90,7 +90,7 @@ class TestDisplayFieldsSelection < Minitest::Test
 
     result = table.full(
       User.order(:id),
-      params: query_params(
+      query_params(
         fields: [query_field_path(:name), query_field_path(:age_plus_ten)],
         sorts: [query_sort(:name_upcase, :asc)]
       )
@@ -112,7 +112,7 @@ class TestDisplayFieldsSelection < Minitest::Test
 
     result = table.full(
       User.all,
-      params: query_params(
+      query_params(
         fields: [query_field_path(:name), query_field_path(:profile, :age_plus_ten),
                  query_field_path(:profile, :post_count)],
         filters: query_filter(%i[profile name_upcase], :eq, "ALICE")
@@ -164,7 +164,7 @@ class TestDisplayFieldsValidation < Minitest::Test
 
     result = table.full(
       Post.order(:id),
-      params: query_params(fields: [query_field_path(:title), query_field_path(:author_name)])
+      query_params(fields: [query_field_path(:title), query_field_path(:author_name)])
     )
 
     assert_equal [], result[:entries]
@@ -181,7 +181,7 @@ class TestDisplayFieldsValidation < Minitest::Test
     assert_raises(ArgumentError) do
       table.full(
         Post.order(:id),
-        params: query_params(fields: [query_field_path(:title), query_field_path(:author_name)])
+        query_params(fields: [query_field_path(:title), query_field_path(:author_name)])
       )
     end
   end
@@ -193,7 +193,7 @@ class TestDisplayFieldsValidation < Minitest::Test
 
     result = table.full(
       User.order(:id),
-      params: query_params(fields: [query_field_path(:name), query_field_path(:unknown_field)])
+      query_params(fields: [query_field_path(:name), query_field_path(:unknown_field)])
     )
 
     assert_equal [], result[:entries]

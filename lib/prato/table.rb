@@ -6,7 +6,7 @@ module Prato
       @spec = spec
     end
 
-    def page(scope, params: nil)
+    def page(scope, params = nil)
       Internal::QueryExecutor.execute(
         scope,
         @spec,
@@ -15,7 +15,7 @@ module Prato
       )
     end
 
-    def full(scope, params: nil)
+    def full(scope, params = nil)
       Internal::QueryExecutor.execute(
         scope,
         @spec,
@@ -24,8 +24,8 @@ module Prato
       )
     end
 
-    def batches(scope, params: nil, batch_size: 1000, &block)
-      return enum_for(:batches, scope, params: params, batch_size: batch_size) unless block
+    def batches(scope, params = nil, batch_size: 1000, &block)
+      return enum_for(:batches, scope, params, batch_size: batch_size) unless block
 
       Internal::QueryExecutor.execute_in_batches(
         scope,

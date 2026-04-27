@@ -11,7 +11,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
 
     result = table.full(
       Post.order(:id),
-      params: query_params(filters: query_filter(:author_name, :eq, "Alice"))
+      query_params(filters: query_filter(:author_name, :eq, "Alice"))
     )
 
     assert_equal(["Hello", "Draft", "Ruby tips", "More Ruby"], result[:entries].map { |entry| entry[:title] })
@@ -26,7 +26,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
 
     result = table.page(
       Post.order(:id),
-      params: query_params(page: 1, per_page: 10, filters: query_filter(:tag_name, :in, %w[rails ruby]))
+      query_params(page: 1, per_page: 10, filters: query_filter(:tag_name, :in, %w[rails ruby]))
     )
 
     assert_equal ["Hello", "Hello", "Young dev"], result[:entries].map { |entry| entry[:title] }.sort
@@ -43,7 +43,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
 
     result = table.page(
       Post.order(:id),
-      params: query_params(
+      query_params(
         page: 1,
         per_page: 10,
         filters: query_or(
@@ -65,7 +65,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
 
     result = table.full(
       Post.order(:id),
-      params: query_params(filters: query_filter(:author_name, :icontains, "ALI"))
+      query_params(filters: query_filter(:author_name, :icontains, "ALI"))
     )
 
     assert_equal(["Hello", "Draft", "Ruby tips", "More Ruby"], result[:entries].map { |entry| entry[:title] })
@@ -79,7 +79,7 @@ class TestApiQueryColumnFiltering < Minitest::Test
 
     result = table.full(
       Post.order(:id),
-      params: query_params(filters: query_filter(:author_name, :contains, "Ali"))
+      query_params(filters: query_filter(:author_name, :contains, "Ali"))
     )
 
     assert_equal [], result[:entries]
@@ -95,7 +95,7 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
 
     result = table.full(
       User.order(:id),
-      params: query_params(filters: query_filter(:name, :eq, "Alice"))
+      query_params(filters: query_filter(:name, :eq, "Alice"))
     )
 
     assert_equal [], result[:entries]
@@ -109,7 +109,7 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
 
     result = table.full(
       User.order(:id),
-      params: query_params(filters: query_filter(:name, :eq, "Alice"))
+      query_params(filters: query_filter(:name, :eq, "Alice"))
     )
 
     assert_equal ["Alice"], result[:entries].map { |entry| entry[:name] }
@@ -124,7 +124,7 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
 
     result = table.full(
       User.order(:id),
-      params: query_params(filters: query_filter(:name, :eq, "Alice"))
+      query_params(filters: query_filter(:name, :eq, "Alice"))
     )
 
     assert_equal ["Alice"], result[:entries].map { |entry| entry[:name] }
@@ -140,7 +140,7 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
     assert_raises(ArgumentError) do
       table.full(
         User.order(:id),
-        params: query_params(filters: query_filter(:name, :eq, "Alice"))
+        query_params(filters: query_filter(:name, :eq, "Alice"))
       )
     end
   end
@@ -154,7 +154,7 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
     assert_raises(ArgumentError) do
       table.full(
         User.order(:id),
-        params: query_params(filters: query_filter(:name, :contains, "Ali"))
+        query_params(filters: query_filter(:name, :contains, "Ali"))
       )
     end
   end
