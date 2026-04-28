@@ -78,13 +78,84 @@ class TestBatchingSqlOnlyColumns < Minitest::Test
     )
   end
 
-  def test_sql_sorts_do_not_change_active_record_batch_order
+  def test_sql_sorts_apply_across_batches
     batches = collect_batches(
       @table,
       params: query_params(sorts: [query_sort(:age, :desc)])
     )
 
-    assert_equal [%w[Alice Bob], %w[Carol Dave]], batch_names(batches)
+    assert_equal [%w[Dave Alice], %w[Carol Bob]], batch_names(batches)
+  end
+
+  def test_ascending_sort_applies_across_batches
+    batches = collect_batches(
+      @table,
+      params: query_params(sorts: [query_sort(:age, :asc)])
+    )
+
+    assert_equal [%w[Bob Carol], %w[Alice Dave]], batch_names(batches)
+  end
+
+  def test_sort_combines_with_filter_and_field_selection
+    batches = collect_batches(
+      @table,
+      params: query_params(
+        fields: :name,
+        filters: query_filter(:age, :gte, 25),
+        sorts: [query_sort(:age, :desc)]
+      )
+    )
+
+    assert_equal(
+      [
+        [{ name: "Dave" }, { name: "Alice" }],
+        [{ name: "Carol" }]
+      ],
+      batches
+    )
+  end
+
+  def test_sorted_empty_result_set_does_not_yield_batches
+    batches = collect_batches(
+      @table,
+      params: query_params(
+        filters: query_filter(:name, :eq, "Nobody"),
+        sorts: [query_sort(:age, :desc)]
+      )
+    )
+
+    assert_equal [], batches
+  end
+
+  def test_sorted_batch_size_larger_than_result_yields_one_batch
+    batches = collect_batches(
+      @table,
+      params: query_params(sorts: [query_sort(:age, :asc)]),
+      batch_size: 10
+    )
+
+    assert_equal [%w[Bob Carol Alice Dave]], batch_names(batches)
+  end
+
+  def test_sorted_partial_final_batch
+    batches = collect_batches(
+      @table,
+      params: query_params(sorts: [query_sort(:age, :asc)]),
+      batch_size: 3
+    )
+
+    assert_equal [%w[Bob Carol Alice], %w[Dave]], batch_names(batches)
+  end
+
+  def test_returns_enumerator_with_sort
+    enumerator = @table.batches(
+      User.all,
+      query_params(sorts: [query_sort(:age, :desc)]),
+      batch_size: 2
+    )
+
+    assert_instance_of Enumerator, enumerator
+    assert_equal [%w[Dave Alice], %w[Carol Bob]], batch_names(enumerator.to_a)
   end
 
   def test_returns_enumerator_without_block
@@ -117,7 +188,7 @@ class TestBatchingSqlOnlyColumns < Minitest::Test
     end
   end
 
-  def test_invalid_sort_field_does_not_yield_even_though_sorts_are_ignored
+  def test_invalid_sort_field_does_not_yield
     batches = collect_batches(
       @table,
       params: query_params(sorts: [query_sort(:unknown_field, :asc)])
@@ -246,7 +317,7 @@ class TestBatchingRubyColumns < Minitest::Test
     assert_equal "ALICE", batches.first.first[:nameUpcase]
   end
 
-  def test_ruby_sorts_are_ignored_and_do_not_materialize_before_batching
+  def test_ruby_sorts_materialize_upfront_then_slice_into_batches
     loader_calls = []
     table = Prato.table(User) do
       column(:name)
@@ -262,7 +333,28 @@ class TestBatchingRubyColumns < Minitest::Test
       params: query_params(sorts: [query_sort(:post_count, :desc)])
     )
 
-    assert_equal [%w[Alice Bob], %w[Carol Dave]], loader_calls
-    assert_equal [%w[Alice Bob], %w[Carol Dave]], batch_names(batches)
+    assert_equal [%w[Alice Bob Carol Dave]], loader_calls
+    assert_equal [%w[Alice Carol], %w[Bob Dave]], batch_names(batches)
+  end
+
+  def test_ruby_filter_with_sql_sort_yields_sorted_batches
+    table = Prato.table(User) do
+      column(:name)
+      column(:age)
+      ruby_column(:post_count, key: :id) do |records, _cache|
+        counts = Post.group(:user_id).count
+        index_records_by_id(records) { |user| counts.fetch(user.id, 0) }
+      end
+    end
+
+    batches = collect_batches(
+      table,
+      params: query_params(
+        filters: query_filter(:post_count, :gte, 1),
+        sorts: [query_sort(:age, :asc)]
+      )
+    )
+
+    assert_equal [%w[Bob Carol], %w[Alice]], batch_names(batches)
   end
 end

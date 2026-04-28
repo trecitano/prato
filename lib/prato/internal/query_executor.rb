@@ -40,15 +40,32 @@ module Prato
 
         base_query_state = QueryState.create(scope, materialization_fields)
         filtered_query = Pipeline::Filtering.filter_query(base_query_state, spec, params&.filters)
+        sorted_query = Pipeline::Sorting.sort_query(filtered_query, spec, params&.sorts)
 
-        if filtered_query.unmaterialized?
-          filtered_query.dataset.in_batches(of: batch_size) do |relation|
-            batch_state = filtered_query.with_dataset(relation)
+        is_materialized = !sorted_query.unmaterialized?
+        has_sort = !Array(params&.sorts).empty?
+
+        if is_materialized
+          sorted_query.dataset.each_slice(batch_size) do |slice|
+            batch_state = sorted_query.with_dataset(slice)
             yield Pipeline::Serializer.serialize_query(batch_state, spec, params&.fields)
           end
+        elsif has_sort
+          offset = 0
+          loop do
+            relation = sorted_query.dataset.offset(offset).limit(batch_size)
+            batch_state = sorted_query.with_dataset(relation)
+            serialized = Pipeline::Serializer.serialize_query(batch_state, spec, params&.fields)
+            break if serialized.empty?
+
+            yield serialized
+            break if serialized.size < batch_size
+
+            offset += batch_size
+          end
         else
-          filtered_query.dataset.each_slice(batch_size) do |slice|
-            batch_state = filtered_query.with_dataset(slice)
+          sorted_query.dataset.in_batches(of: batch_size) do |relation|
+            batch_state = sorted_query.with_dataset(relation)
             yield Pipeline::Serializer.serialize_query(batch_state, spec, params&.fields)
           end
         end
