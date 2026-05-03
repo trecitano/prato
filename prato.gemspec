@@ -8,18 +8,28 @@ Gem::Specification.new do |spec|
   spec.authors = ["Valter Santos"]
   spec.email = ["valter@trecitano.com"]
 
-  spec.summary = "Build queryable tables from Active Record models."
-  spec.description = "Prato defines tabular Active Record projections with filtering, sorting, and Ruby-backed columns."
-  spec.homepage = "https://github.com/trecitano/prato"
+  spec.summary = "Filter, sort, and paginate Active Record queries from a table definition."
+  spec.description = <<~DESCRIPTION
+Prato is a library that simplifies the backend code required to support queryable data, 
+by mapping user-provided parameters onto a predefined table structure, allowing Prato
+to invoke Active Record methods like  `.where`, `.order`, `.joins`, `.pluck` and others.
+
+The immediate use case for this is fetching data for tables in the frontend, 
+and with a simple *Prato* table, it becomes trivial to provide any kind of filtering / sorting / pagination operations 
+over an Active Record relation.
+  DESCRIPTION
+  spec.homepage = "https://prato.trecitano.com/"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 2.4.0"
 
-  spec.metadata["allowed_push_host"] = "https://rubygems.org"
-  spec.metadata["homepage_uri"] = spec.homepage
-  spec.metadata["source_code_uri"] = spec.homepage
-  spec.metadata["changelog_uri"] = "#{spec.homepage}/releases"
+  spec.metadata = {
+    "allowed_push_host" => "https://rubygems.org",
+    "homepage_uri" => spec.homepage,
+    "source_code_uri" => "https://github.com/trecitano/prato",
+    "changelog_uri" => "https://github.com/trecitano/prato/releases",
+  }
 
-  spec.files = Dir["CHANGELOG.md", "LICENSE.txt", "README.md", "lib/**/*", "sig/**/*"]
+  spec.files = Dir["CHANGELOG.md", "LICENSE.txt", "README.md", "lib/**/*"]
   spec.require_path = "lib"
 
   spec.add_dependency "activerecord", ">= 5.0"
