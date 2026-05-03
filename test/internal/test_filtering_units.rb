@@ -258,6 +258,7 @@ class TestFilteringRubyColumns < Minitest::Test
 
   def setup
     @table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       ruby_column(:post_count, key: :id)
       ruby_column(:name_upcase, key: :id)
@@ -286,6 +287,7 @@ class TestFilteringMembershipEdgeCases < Minitest::Test
 
   def setup
     @table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       ruby_column(:name_upcase, key: :id)
 
@@ -361,6 +363,7 @@ end
 class TestFilteringRubyColumnIncludes < Minitest::Test
   def setup
     @table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       ruby_column(:company_name, key: :id, includes: :company)
 
@@ -422,6 +425,7 @@ class TestFilteringSqlExpressionColumnsSection < Minitest::Test
 
   def setup
     @table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       section(:computed) do
         column(:age_plus_ten, expression: "users.age + 10")
@@ -440,6 +444,7 @@ class TestFilteringRubyColumnsSection < Minitest::Test
 
   def setup
     @table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       section(:computed) do
         ruby_column(:post_count, key: :id) do |records, _cache|

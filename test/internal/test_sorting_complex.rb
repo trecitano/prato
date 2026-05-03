@@ -52,6 +52,7 @@ class TestSortingAfterRubyFiltering < Minitest::Test
     company_name_loader_proc = company_name_loader
 
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       column(:age)
       ruby_column(:company_name, key: :id, includes: :company, &company_name_loader_proc)
@@ -73,6 +74,7 @@ class TestSortingAfterRubyFiltering < Minitest::Test
     post_count_loader_proc = post_count_loader
 
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       column(company_name: %i[company name])
       ruby_column(:post_count, key: :id, &post_count_loader_proc)
@@ -94,6 +96,7 @@ class TestSortingAfterRubyFiltering < Minitest::Test
     company_name_loader_proc = company_name_loader
 
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       column(:age)
       ruby_column(:company_name, key: :id, includes: :company, &company_name_loader_proc)
@@ -115,6 +118,7 @@ class TestSortingAfterRubyFiltering < Minitest::Test
     company_name_loader_proc = company_name_loader
 
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       query_column(:age_plus_ten, expression: "users.age + 10")
       ruby_column(:company_name, key: :id, includes: :company, &company_name_loader_proc)
@@ -136,6 +140,7 @@ class TestSortingAfterRubyFiltering < Minitest::Test
     company_name_loader_proc = company_name_loader
 
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       query_column(:post_count_sql, count: :posts)
       ruby_column(:company_name, key: :id, includes: :company, &company_name_loader_proc)
@@ -161,6 +166,7 @@ class TestSortingComplexSections < Minitest::Test
     post_count_loader_proc = post_count_loader
 
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
 
       section(:profile) do
@@ -191,6 +197,7 @@ class TestSortingComplexSections < Minitest::Test
     company_name_loader_proc = company_name_loader
 
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
 
       section(:stats) do

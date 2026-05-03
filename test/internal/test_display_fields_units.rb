@@ -11,6 +11,7 @@ module TestDisplayFields
 
   def build_mixed_user_table
     Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       column(company_name: %i[company name])
       column(:age_plus_ten, expression: "users.age + 10")
@@ -24,6 +25,7 @@ module TestDisplayFields
 
   def build_mixed_user_section_table
     Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
 
       section(:profile) do

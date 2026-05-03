@@ -2,7 +2,7 @@ module Prato
   class Configuration
     type key_transformation = :camelCase | :snake_case | :none
     type invalid_input = :empty | :raise
-    type default_only = :display | :filter | :sort
+    type queryable = :all | :none | :filter | :sort
 
     interface _ParameterParser
       def parse_parameters: (Hash[Symbol | String, untyped] input, ^(Array[String]) -> Symbol? field_lookup) -> Query::Parameters
@@ -17,8 +17,8 @@ module Prato
       ?parameter_parser: _ParameterParser?,
       ?default_page_size: Integer?,
       ?maximum_page_size: Integer?,
-      ?default_only: default_only?,
-      ?default_ruby_column_only: default_only?
+      ?default_queryable: queryable?,
+      ?default_ruby_column_queryable: queryable?
     ) -> Configuration
 
     attr_accessor default_page_size: Integer
@@ -26,10 +26,11 @@ module Prato
     attr_accessor key_transformation: key_transformation
     attr_accessor on_invalid_input: invalid_input
     attr_accessor parameter_parser: _ParameterParser
-    attr_accessor default_ruby_column_only: default_only
-    attr_reader default_only: default_only?
+    attr_accessor default_queryable: queryable
+    attr_accessor default_ruby_column_queryable: queryable
 
     def initialize: () -> void
-    def default_only=: (default_only value) -> default_only
+    def default_queryable=: (queryable value) -> queryable
+    def default_ruby_column_queryable=: (queryable value) -> queryable
   end
 end

@@ -300,6 +300,7 @@ class TestBatchingRubyColumns < Minitest::Test
   def test_ruby_filter_materializes_then_slices_matching_entries
     loader_calls = []
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       ruby_column(:name_upcase, key: :id) do |records, _cache|
         loader_calls << records.map(&:name)
@@ -320,6 +321,7 @@ class TestBatchingRubyColumns < Minitest::Test
   def test_ruby_sorts_materialize_upfront_then_slice_into_batches
     loader_calls = []
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       ruby_column(:post_count, key: :id) do |records, _cache|
         loader_calls << records.map(&:name)
@@ -339,6 +341,7 @@ class TestBatchingRubyColumns < Minitest::Test
 
   def test_ruby_filter_with_sql_sort_yields_sorted_batches
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       column(:age)
       ruby_column(:post_count, key: :id) do |records, _cache|

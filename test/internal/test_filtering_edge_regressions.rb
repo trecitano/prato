@@ -18,8 +18,8 @@ class TestFilteringEmptyGroupSemantics < Minitest::Test
 
   def setup
     @table = Prato.table(User) do
-      column(:name)
       configure(on_invalid_input: :raise)
+      column(:name)
     end
   end
 
@@ -42,6 +42,7 @@ class TestFilteringMixedEvaluationParityForNullableSqlColumns < Minitest::Test
 
   def setup
     @table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all, on_invalid_input: :raise)
       column(:name)
       column(:company_id)
       column(:company_label, expression: "CASE WHEN users.company_id IS NULL THEN NULL ELSE 'COMPANY' END")
@@ -49,7 +50,6 @@ class TestFilteringMixedEvaluationParityForNullableSqlColumns < Minitest::Test
       ruby_column(:always_zero, key: :id) do |records, _cache|
         index_records_by_id(records) { 0 }
       end
-      configure(on_invalid_input: :raise)
     end
   end
 
@@ -84,11 +84,11 @@ class TestFilteringContainsParityAcrossMixedEvaluation < Minitest::Test
 
   def setup
     @table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all, on_invalid_input: :raise)
       column(:name)
       ruby_column(:always_zero, key: :id) do |records, _cache|
         index_records_by_id(records) { 0 }
       end
-      configure(on_invalid_input: :raise)
     end
   end
 

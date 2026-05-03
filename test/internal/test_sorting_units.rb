@@ -176,6 +176,7 @@ class TestSortingRubyColumns < Minitest::Test
 
   def test_ruby_column_sort_orders_records_descending
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       ruby_column(:post_count, key: :id)
 
@@ -193,6 +194,7 @@ class TestSortingRubyColumns < Minitest::Test
 
   def test_ruby_sort_handles_nil_values_consistently
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       ruby_column(:company_name, key: :id)
 
@@ -212,6 +214,7 @@ class TestSortingRubyColumns < Minitest::Test
 
   def test_mixed_ruby_and_sql_sorts_are_evaluated_together
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       column(:age)
       ruby_column(:company_name, key: :id)
@@ -236,6 +239,7 @@ class TestSortingRubyColumnIncludes < Minitest::Test
 
   def test_ruby_sort_can_use_includes_when_sort_field_is_not_displayed
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
       ruby_column(:company_name, key: :id, includes: :company)
 
@@ -287,7 +291,7 @@ class TestSortingQueryOnlyColumnsAndValidation < Minitest::Test
 
   def test_sorting_on_display_only_column_returns_empty_result_by_default
     table = Prato.table(User) do
-      column(:name, only: :display)
+      column(:name, queryable: :none)
     end
 
     result = table.full(
@@ -301,7 +305,7 @@ class TestSortingQueryOnlyColumnsAndValidation < Minitest::Test
   def test_sorting_on_display_only_column_raises_when_invalid_input_is_configured_to_raise
     table = Prato.table(User) do
       configure(on_invalid_input: :raise)
-      column(:name, only: :display)
+      column(:name, queryable: :none)
     end
 
     assert_raises(ArgumentError) do

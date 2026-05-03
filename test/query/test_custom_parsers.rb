@@ -20,7 +20,7 @@ class FictionalSearchPageParser < Prato::Query::DefaultParser
   def extract_sorts(input)
     sort = input.fetch(:order_by)
     is_desc = sort.start_with?("-")
-    field = sort.delete_prefix("-")
+    field = is_desc ? sort[1..-1] : sort
 
     [{ field: field, order: is_desc ? "desc" : "asc" }]
   end
@@ -55,7 +55,7 @@ class FictionalMinimalParser
 
   def sorts(order, field_lookup)
     is_desc = order.start_with?("-")
-    field = order.delete_prefix("-")
+    field = is_desc ? order[1..-1] : order
 
     [Prato::Query::Sort.new(resolve_field(field, field_lookup), is_desc)]
   end

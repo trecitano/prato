@@ -20,6 +20,7 @@ module FilteringComplexHelpers
 
   def build_comment_ruby_table
     Prato.table(Comment) do
+      configure(default_ruby_column_queryable: :all, on_invalid_input: :raise)
       column(:body)
       ruby_column(:body_length, key: :id)
       ruby_column(:body_upcase, key: :id)
@@ -92,13 +93,12 @@ module FilteringComplexHelpers
       ruby_loader(:parent_category_name_ruby) do |_records, cache|
         cache[:parent_category_map]
       end
-
-      configure(on_invalid_input: :raise)
     end
   end
 
   def build_comment_mixed_table
     Prato.table(Comment) do
+      configure(default_ruby_column_queryable: :all, on_invalid_input: :raise)
       column(:body)
       column(:score)
       column(author_name: %i[user name])
@@ -106,8 +106,8 @@ module FilteringComplexHelpers
       column(post_author_name: %i[post user name])
       column(post_category: %i[post category name])
       column(post_parent_category: %i[post category parent_category name])
-      column(:score_filter_only, expression: "comments.score", only: :filter)
-      column(:post_comment_count_filter_only, count: %i[post comments], only: :filter)
+      column(:score_filter_only, expression: "comments.score", queryable: :filter)
+      column(:post_comment_count_filter_only, count: %i[post comments], queryable: :filter)
       ruby_column(:body_length, key: :id)
       ruby_column(:body_upcase, key: :id)
       ruby_column(:body_starts_with_g, key: :id)
@@ -137,17 +137,16 @@ module FilteringComplexHelpers
       ruby_loader(:post_author_company, includes: { post: { user: :company } }) do |records, _cache|
         index_records_by_id(records) { |comment| comment.post.user.company&.name }
       end
-
-      configure(on_invalid_input: :raise)
     end
   end
 
   def build_comment_mixed_section_table
     Prato.table(Comment) do
+      configure(default_ruby_column_queryable: :all, on_invalid_input: :raise)
       column(:body)
       column(:score)
-      column(:score_filter_only, expression: "comments.score", only: :filter)
-      column(:post_comment_count_filter_only, count: %i[post comments], only: :filter)
+      column(:score_filter_only, expression: "comments.score", queryable: :filter)
+      column(:post_comment_count_filter_only, count: %i[post comments], queryable: :filter)
 
       section(:commenter) do
         column(name: %i[user name])
@@ -206,8 +205,6 @@ module FilteringComplexHelpers
       ruby_loader(:post_author_company, includes: { post: { user: :company } }) do |records, _cache|
         index_records_by_id(records) { |comment| comment.post.user.company&.name }
       end
-
-      configure(on_invalid_input: :raise)
     end
   end
 

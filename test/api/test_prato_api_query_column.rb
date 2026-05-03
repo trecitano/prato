@@ -89,7 +89,7 @@ end
 class TestApiDisplayOnlyColumnFiltering < Minitest::Test
   def test_filtering_on_display_only_column_returns_empty_result_by_default
     table = Prato.table(User) do
-      column(:name, only: :display)
+      column(:name, queryable: :none)
     end
 
     result = table.full(
@@ -100,9 +100,10 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
     assert_equal [], result
   end
 
-  def test_display_only_column_with_filter_option_remains_filterable
+  def test_default_queryable_none_can_be_overridden_with_all_queryable
     table = Prato.table(User) do
-      column(:name, only: :display, filter: [:eq])
+      configure(default_queryable: :none)
+      column(:name, queryable: :all)
     end
 
     result = table.full(
@@ -114,9 +115,52 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
     assert_equal 1, result.length
   end
 
-  def test_display_default_only_can_be_overridden_with_filter_option
+  def test_none_queryable_column_can_display_but_not_filter_or_sort
     table = Prato.table(User) do
-      configure(default_only: :display)
+      column(:name, queryable: :none)
+    end
+
+    output = table.full(User.where(name: "Alice"))
+    filtered = table.full(User.order(:id), query_params(filters: query_filter(:name, :eq, "Alice")))
+    sorted = table.full(User.order(:id), query_params(sorts: [query_sort(:name, :asc)]))
+
+    assert_equal "Alice", output.first[:name]
+    assert_equal [], filtered
+    assert_equal [], sorted
+  end
+
+  def test_default_queryable_can_be_overridden_with_all_queryable
+    table = Prato.table(User) do
+      configure(default_queryable: :none)
+      column(:name, queryable: :all)
+    end
+
+    result = table.full(
+      User.order(:id),
+      query_params(filters: query_filter(:name, :eq, "Alice"))
+    )
+
+    assert_equal ["Alice"], result.map { |entry| entry[:name] }
+    assert_equal 1, result.length
+  end
+
+  def test_display_only_column_with_filter_option_remains_filterable
+    table = Prato.table(User) do
+      column(:name, queryable: :none, filter: [:eq])
+    end
+
+    result = table.full(
+      User.order(:id),
+      query_params(filters: query_filter(:name, :eq, "Alice"))
+    )
+
+    assert_equal ["Alice"], result.map { |entry| entry[:name] }
+    assert_equal 1, result.length
+  end
+
+  def test_default_queryable_none_can_be_overridden_with_filter_option
+    table = Prato.table(User) do
+      configure(default_queryable: :none)
       column(:name, filter: [:eq])
     end
 
@@ -132,7 +176,7 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
   def test_filtering_on_display_only_column_raises_when_invalid_input_is_configured_to_raise
     table = Prato.table(User) do
       configure(on_invalid_input: :raise)
-      column(:name, only: :display)
+      column(:name, queryable: :none)
     end
 
     assert_raises(ArgumentError) do
@@ -154,6 +198,85 @@ class TestApiDisplayOnlyColumnFiltering < Minitest::Test
         User.order(:id),
         query_params(filters: query_filter(:name, :contains, "Ali"))
       )
+    end
+  end
+end
+
+class TestApiDefaultRubyColumnQueryable < Minitest::Test
+  def test_default_ruby_column_queryable_none_displays_but_does_not_filter_or_sort
+    table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :none)
+      column(:name)
+      ruby_column(:name_upcase, key: :id) do |records, _cache|
+        index_records_by_id(records) { |user| user.name.upcase }
+      end
+    end
+
+    output = table.full(User.where(name: "Alice"))
+    filtered = table.full(User.order(:id), query_params(filters: query_filter(:name_upcase, :eq, "ALICE")))
+    sorted = table.full(User.order(:id), query_params(sorts: [query_sort(:name_upcase, :desc)]))
+
+    assert_equal "ALICE", output.first[:nameUpcase]
+    assert_equal [], filtered
+    assert_equal [], sorted
+  end
+
+  def test_ruby_column_all_queryable_overrides_default_ruby_column_queryable
+    table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :none)
+      column(:name)
+      ruby_column(:post_count, key: :id, queryable: :all) do |records, _cache|
+        counts = Post.group(:user_id).count
+        index_records_by_id(records) { |user| counts.fetch(user.id, 0) }
+      end
+    end
+
+    filtered = table.full(User.order(:id), query_params(filters: query_filter(:post_count, :gt, 2)))
+    sorted = table.full(User.order(:id), query_params(sorts: [query_sort(:post_count, :desc)]))
+
+    assert_equal %w[Alice Carol], filtered.map { |entry| entry[:name] }
+    assert_equal %w[Alice Carol Bob Dave], sorted.map { |entry| entry[:name] }
+  end
+
+  def test_default_ruby_column_queryable_none_can_be_overridden_with_all_queryable
+    table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :none)
+      column(:name)
+      ruby_column(:post_count, key: :id, queryable: :all) do |records, _cache|
+        counts = Post.group(:user_id).count
+        index_records_by_id(records) { |user| counts.fetch(user.id, 0) }
+      end
+    end
+
+    filtered = table.full(User.order(:id), query_params(filters: query_filter(:post_count, :gt, 2)))
+    sorted = table.full(User.order(:id), query_params(sorts: [query_sort(:post_count, :desc)]))
+
+    assert_equal %w[Alice Carol], filtered.map { |entry| entry[:name] }
+    assert_equal %w[Alice Carol Bob Dave], sorted.map { |entry| entry[:name] }
+  end
+
+  def test_query_column_queryable_filter_does_not_sort
+    table = Prato.table(Post) do
+      column(:title)
+      query_column(author_name: %i[user name], queryable: :filter)
+    end
+
+    filtered = table.full(
+      Post.order(:id),
+      query_params(filters: query_filter(:author_name, :eq, "Alice"))
+    )
+    sorted = table.full(Post.order(:id), query_params(sorts: [query_sort(:author_name, :asc)]))
+
+    assert_equal ["Hello", "Draft", "Ruby tips", "More Ruby"], filtered.map { |entry| entry[:title] }
+    assert_equal [], sorted
+  end
+
+  def test_query_column_rejects_none_queryable
+    assert_raises(ArgumentError) do
+      Prato.table(Post) do
+        column(:title)
+        query_column(:author_name, %i[user name], queryable: :none)
+      end
     end
   end
 end

@@ -11,10 +11,10 @@ module Prato
         @ruby_loaders = nil
       end
 
-      AGGREGATE_FUNCTIONS = %i[count sum avg min max].freeze
-      COMMON_RESERVED_KEYWORDS = %i[only].freeze
-      RESERVED_COLUMN_SYMBOLS = (%i[format expression filter] + COMMON_RESERVED_KEYWORDS + AGGREGATE_FUNCTIONS).freeze
-      RESERVED_RUBY_COLUMN_SYMBOLS = (%i[key filter includes] + COMMON_RESERVED_KEYWORDS).freeze
+      AGGREGATE_FUNCTIONS = [:count, :sum, :avg, :min, :max].freeze
+      COMMON_RESERVED_KEYWORDS = [:queryable].freeze
+      RESERVED_COLUMN_SYMBOLS = ([:format, :expression, :filter] + COMMON_RESERVED_KEYWORDS + AGGREGATE_FUNCTIONS).freeze
+      RESERVED_RUBY_COLUMN_SYMBOLS = ([:key, :filter, :includes] + COMMON_RESERVED_KEYWORDS).freeze
 
       def inner_column(*args, **kwargs)
         draft = build_draft(args, kwargs)
@@ -31,10 +31,11 @@ module Prato
         display_name, loader_id = parse_name_map(name_map)
 
         key = parse_accessor(options[:key])
+        queryable = resolve_queryable_option!(options, VALID_COLUMN_QUERYABLE)
         validate_filter_option!(options[:filter])
         column = ::Prato::Types::RubyColumn.new(loader_id, key: key, filter: options[:filter], includes: options[:includes])
 
-        @draft_columns << DraftColumn.new(display_name, loader_id, column)
+        @draft_columns << DraftColumn.new(display_name, loader_id, column, queryable: queryable)
         inner_ruby_loader(loader_id, &block) if block_given?
       end
 
@@ -48,12 +49,14 @@ module Prato
         section.spec.draft_columns.each do |nested_draft|
           new_output_path = [id] + nested_draft.output_paths
 
-          draft = DraftColumn.new(nested_draft.override_name,
-                                  nested_draft.accessor_name,
-                                  nested_draft.column,
-                                  only: nested_draft.only,
-                                  query_only: nested_draft.query_only,
-                                  output_paths: new_output_path)
+          draft = DraftColumn.new(
+            nested_draft.override_name,
+            nested_draft.accessor_name,
+            nested_draft.column,
+            queryable: nested_draft.queryable,
+            query_only: nested_draft.query_only,
+            output_paths: new_output_path
+          )
 
           @draft_columns << draft
         end
@@ -131,12 +134,19 @@ module Prato
       def resolve_capability(capability, draft)
         return true if capability == :filter && !draft.column.filter.nil?
 
-        only = draft.only || (draft.query_only ? nil : @config.default_only)
+        queryable = resolve_queryable(draft)
 
-        if only
-          only == capability
+        queryable == :all || queryable == capability
+      end
+
+      def resolve_queryable(draft)
+        return draft.queryable if draft.queryable
+        return :all if draft.query_only
+
+        if draft.column.is_a?(Types::RubyColumn)
+          @config.default_ruby_column_queryable
         else
-          true
+          @config.default_queryable
         end
       end
 
@@ -156,20 +166,14 @@ module Prato
         raise ArgumentError, "Ruby loader '#{loader_name}' must respond to #call."
       end
 
-      VALID_COLUMN_ONLY = %i[display filter sort].freeze
-      VALID_QUERY_COLUMN_ONLY = %i[filter sort].freeze
+      VALID_COLUMN_QUERYABLE = [:all, :none, :filter, :sort].freeze
+      VALID_QUERY_COLUMN_QUERYABLE = [:all, :filter, :sort].freeze
 
       def build_draft(args, kwargs, query_only: false)
-        only = kwargs.delete(:only)
-
-        if only
-          raise ArgumentError, "only: must be a Symbol, got #{only.class}" unless only.is_a?(Symbol)
-
-          valid = query_only ? VALID_QUERY_COLUMN_ONLY : VALID_COLUMN_ONLY
-          unless valid.include?(only)
-            raise ArgumentError, "only: must be one of #{valid.map(&:inspect).join(", ")}, got #{only.inspect}"
-          end
-        end
+        queryable_options = {}
+        queryable_options[:queryable] = kwargs.delete(:queryable) if kwargs.key?(:queryable)
+        queryable = resolve_queryable_option!(queryable_options,
+                                              query_only ? VALID_QUERY_COLUMN_QUERYABLE : VALID_COLUMN_QUERYABLE)
 
         name_map, options = extract_name_and_options(args, kwargs, RESERVED_COLUMN_SYMBOLS)
         aggregate_function, aggregate_accessor = extract_aggregate(options)
@@ -180,17 +184,16 @@ module Prato
         if aggregate_function
           column = ::Prato::Types::AggregateColumn.new(aggregate_function, aggregate_accessor,
                                                        format: options[:format], filter: options[:filter])
-          DraftColumn.new(accessor, nil, column, only: only, query_only: query_only)
+          DraftColumn.new(accessor, nil, column, queryable: queryable, query_only: query_only)
         elsif options[:expression]
-          column = ::Prato::Types::ExpressionColumn.new(options[:expression], format: options[:format],
-                                                                               filter: options[:filter])
-          DraftColumn.new(override_name, accessor, column, only: only, query_only: query_only)
+          column = ::Prato::Types::ExpressionColumn.new(options[:expression], format: options[:format], filter: options[:filter])
+          DraftColumn.new(override_name, accessor, column, queryable: queryable, query_only: query_only)
         elsif accessor.is_a?(Array) && accessor.length > 1
           column = ::Prato::Types::AssociationColumn.new(accessor, format: options[:format], filter: options[:filter])
-          DraftColumn.new(override_name, accessor, column, only: only, query_only: query_only)
+          DraftColumn.new(override_name, accessor, column, queryable: queryable, query_only: query_only)
         else
           column = ::Prato::Types::DirectColumn.new(accessor, format: options[:format], filter: options[:filter])
-          DraftColumn.new(override_name, accessor, column, only: only, query_only: query_only)
+          DraftColumn.new(override_name, accessor, column, queryable: queryable, query_only: query_only)
         end
       end
 
@@ -199,6 +202,19 @@ module Prato
         return if filter.is_a?(Array) && filter.all? { |operator| operator.is_a?(Symbol) }
 
         raise ArgumentError, "filter must be nil, an Array of symbols, or a Proc"
+      end
+
+      def resolve_queryable_option!(options, valid)
+        return nil unless options.key?(:queryable)
+
+        queryable = options[:queryable]
+        raise ArgumentError, "queryable: must be a Symbol, got #{queryable.class}" unless queryable.is_a?(Symbol)
+
+        unless valid.include?(queryable)
+          raise ArgumentError, "queryable: must be one of #{valid.map(&:inspect).join(", ")}, got #{queryable.inspect}"
+        end
+
+        queryable
       end
 
       def extract_name_and_options(args, kwargs, reserved)
@@ -294,18 +310,19 @@ module Prato
       private_constant :RESERVED_RUBY_COLUMN_SYMBOLS
       private_constant :COMMON_RESERVED_KEYWORDS
       private_constant :AGGREGATE_FUNCTIONS
-      private_constant :VALID_COLUMN_ONLY
-      private_constant :VALID_QUERY_COLUMN_ONLY
+      private_constant :VALID_COLUMN_QUERYABLE
+      private_constant :VALID_QUERY_COLUMN_QUERYABLE
     end
 
     class DraftColumn
-      attr_reader :override_name, :accessor_name, :column, :only, :query_only, :output_paths
+      attr_reader :override_name, :accessor_name, :column, :queryable, :query_only, :output_paths
 
-      def initialize(override_name, accessor_name, column, only: nil, query_only: false, output_paths: [])
+      def initialize(override_name, accessor_name, column, queryable: nil, query_only: false,
+                     output_paths: [])
         @override_name = override_name
         @accessor_name = accessor_name
         @column = column
-        @only = only
+        @queryable = queryable
         @query_only = query_only
         @output_paths = output_paths.empty? ? [name] : output_paths
       end

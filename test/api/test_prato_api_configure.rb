@@ -9,8 +9,8 @@ class TestApiConfigureDefaults < Minitest::Test
     assert_equal 100, config.maximum_page_size
     assert_equal :camelCase, config.key_transformation
     assert_equal :empty, config.on_invalid_input
-    assert_nil config.default_only
-    assert_equal :display, config.default_ruby_column_only
+    assert_equal :all, config.default_queryable
+    assert_equal :none, config.default_ruby_column_queryable
   end
 end
 

@@ -273,6 +273,7 @@ class TestApiSectionQuerying < Minitest::Test
 
   def test_ruby_section_fields_can_be_sorted_via_dotted_raw_params
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
 
       section(:computed) do
@@ -296,6 +297,7 @@ class TestApiSectionQuerying < Minitest::Test
 
   def test_ruby_section_fields_with_nil_values_can_be_sorted_via_dotted_raw_params
     table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all)
       column(:name)
 
       section(:computed) do

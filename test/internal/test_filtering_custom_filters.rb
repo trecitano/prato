@@ -25,6 +25,7 @@ class TestFilteringCustomDirectColumn < Minitest::Test
 
   def setup
     @table = Prato.table(User) do
+      configure(on_invalid_input: :raise)
       column(:name)
       column(:age, filter: lambda { |scope, operator, value|
         case operator
@@ -32,8 +33,6 @@ class TestFilteringCustomDirectColumn < Minitest::Test
           scope.where(age: Array(value).map { |v| [v - 1, v, v + 1] }.flatten)
         end
       })
-
-      configure(on_invalid_input: :raise)
     end
   end
 
@@ -63,6 +62,7 @@ class TestFilteringCustomAssociationColumn < Minitest::Test
 
   def setup
     @table = Prato.table(User) do
+      configure(on_invalid_input: :raise)
       column(:name)
       column(company_name: %i[company name], filter: lambda { |scope, operator, value|
         case operator
@@ -71,7 +71,6 @@ class TestFilteringCustomAssociationColumn < Minitest::Test
         end
       })
 
-      configure(on_invalid_input: :raise)
     end
   end
 
@@ -165,7 +164,7 @@ class TestFilteringCustomRubyColumn < Minitest::Test
         index_records_by_id(records) { |user| user.name.length }
       end
 
-      configure(on_invalid_input: :raise)
+      configure(default_ruby_column_queryable: :all, on_invalid_input: :raise)
     end
   end
 
@@ -342,6 +341,7 @@ class TestFilteringCustomWithRubyMixed < Minitest::Test
 
   def setup
     @table = Prato.table(User) do
+      configure(default_ruby_column_queryable: :all, on_invalid_input: :raise)
       column(:name)
       column(:age, filter: lambda { |scope, operator, value|
         case operator
@@ -355,8 +355,6 @@ class TestFilteringCustomWithRubyMixed < Minitest::Test
       ruby_loader(:name_length) do |records, _cache|
         index_records_by_id(records) { |user| user.name.length }
       end
-
-      configure(on_invalid_input: :raise)
     end
   end
 

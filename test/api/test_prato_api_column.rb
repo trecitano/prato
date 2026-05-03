@@ -43,7 +43,7 @@ class TestApiColumnSingleArgument < Minitest::Test
 
   def test_single_argument_format_only_display
     table = Prato.table(User) do
-      column(:name, format: lambda(&:upcase), only: :display)
+      column(:name, format: lambda(&:upcase), queryable: :none)
     end
 
     validate_with_result(table, :name, "ALICE")
@@ -51,7 +51,7 @@ class TestApiColumnSingleArgument < Minitest::Test
 
   def test_single_argument_format_only_filter
     table = Prato.table(User) do
-      column(:name, format: lambda(&:upcase), only: :filter)
+      column(:name, format: lambda(&:upcase), queryable: :filter)
     end
 
     validate_with_result(table, :name, "ALICE")
@@ -59,7 +59,7 @@ class TestApiColumnSingleArgument < Minitest::Test
 
   def test_single_argument_format_only_sort
     table = Prato.table(User) do
-      column(:name, format: lambda(&:upcase), only: :sort)
+      column(:name, format: lambda(&:upcase), queryable: :sort)
     end
 
     validate_with_result(table, :name, "ALICE")
@@ -103,7 +103,7 @@ class TestApiColumnLabelAndAccessor < Minitest::Test
 
   def test_two_arguments_only_display
     table = Prato.table(User) do
-      column(:specific_name, :name, only: :display)
+      column(:specific_name, :name, queryable: :none)
     end
 
     validate(table, :specificName)
@@ -111,7 +111,7 @@ class TestApiColumnLabelAndAccessor < Minitest::Test
 
   def test_two_arguments_only_filter
     table = Prato.table(User) do
-      column(:specific_name, :name, only: :filter)
+      column(:specific_name, :name, queryable: :filter)
     end
 
     validate(table, :specificName)
@@ -119,7 +119,7 @@ class TestApiColumnLabelAndAccessor < Minitest::Test
 
   def test_two_arguments_only_sort
     table = Prato.table(User) do
-      column(:specific_name, :name, only: :sort)
+      column(:specific_name, :name, queryable: :sort)
     end
 
     validate(table, :specificName)
@@ -155,7 +155,7 @@ class TestApiColumnExpression < Minitest::Test
 
   def test_expression_only_display
     table = Prato.table(User) do
-      column(:double_age, expression: "users.age * 2", only: :display)
+      column(:double_age, expression: "users.age * 2", queryable: :none)
     end
 
     validate_with_result(table, :doubleAge, 60)
@@ -163,7 +163,7 @@ class TestApiColumnExpression < Minitest::Test
 
   def test_expression_only_filter
     table = Prato.table(User) do
-      column(:double_age, expression: "users.age * 2", only: :filter)
+      column(:double_age, expression: "users.age * 2", queryable: :filter)
     end
 
     validate_with_result(table, :doubleAge, 60)
@@ -171,7 +171,7 @@ class TestApiColumnExpression < Minitest::Test
 
   def test_expression_only_sort
     table = Prato.table(User) do
-      column(:double_age, expression: "users.age * 2", only: :sort)
+      column(:double_age, expression: "users.age * 2", queryable: :sort)
     end
 
     validate_with_result(table, :doubleAge, 60)
@@ -179,7 +179,7 @@ class TestApiColumnExpression < Minitest::Test
 
   def test_expression_format_and_only_with_symbol
     table = Prato.table(User) do
-      column(:double_age, expression: "users.age * 2", format: ->(value) { value * 10 }, only: :filter)
+      column(:double_age, expression: "users.age * 2", format: ->(value) { value * 10 }, queryable: :filter)
     end
 
     validate_with_result(table, :doubleAge, 600)
@@ -187,7 +187,7 @@ class TestApiColumnExpression < Minitest::Test
 
   def test_expression_format_and_only_with_string
     table = Prato.table(User) do
-      column("Double age!", expression: "users.age * 2", format: ->(value) { value * 10 }, only: :filter)
+      column("Double age!", expression: "users.age * 2", format: ->(value) { value * 10 }, queryable: :filter)
     end
 
     validate_with_result(table, :"Double age!", 600)
@@ -247,7 +247,7 @@ class TestApiColumnCount < Minitest::Test
 
   def test_count_only_display
     table = Prato.table(User) do
-      column(:post_count, count: :posts, only: :display)
+      column(:post_count, count: :posts, queryable: :none)
     end
 
     validate_with_result(table, :postCount, 4)
@@ -255,7 +255,7 @@ class TestApiColumnCount < Minitest::Test
 
   def test_count_only_filter
     table = Prato.table(User) do
-      column(:post_count, count: :posts, only: :filter)
+      column(:post_count, count: :posts, queryable: :filter)
     end
 
     validate_with_result(table, :postCount, 4)
@@ -263,7 +263,7 @@ class TestApiColumnCount < Minitest::Test
 
   def test_count_only_sort
     table = Prato.table(User) do
-      column(:post_count, count: :posts, only: :sort)
+      column(:post_count, count: :posts, queryable: :sort)
     end
 
     validate_with_result(table, :postCount, 4)
@@ -271,7 +271,7 @@ class TestApiColumnCount < Minitest::Test
 
   def test_count_format_and_only_with_symbol
     table = Prato.table(User) do
-      column(:post_count, count: :posts, format: ->(value) { value * 10 }, only: :filter)
+      column(:post_count, count: :posts, format: ->(value) { value * 10 }, queryable: :filter)
     end
 
     validate_with_result(table, :postCount, 40)
@@ -279,7 +279,7 @@ class TestApiColumnCount < Minitest::Test
 
   def test_count_format_and_only_with_string
     table = Prato.table(User) do
-      column("Super count!", count: :posts, format: ->(value) { value * 10 }, only: :filter)
+      column("Super count!", count: :posts, format: ->(value) { value * 10 }, queryable: :filter)
     end
 
     validate_with_result(table, :"Super count!", 40)
@@ -325,7 +325,7 @@ class TestApiColumnSum < Minitest::Test
 
   def test_sum_only_display
     table = Prato.table(User) do
-      column(:post_score, sum: %i[posts score], only: :display)
+      column(:post_score, sum: %i[posts score], queryable: :none)
     end
 
     validate_with_result(table, :postScore, 14)
@@ -333,7 +333,7 @@ class TestApiColumnSum < Minitest::Test
 
   def test_sum_only_filter
     table = Prato.table(User) do
-      column(:post_score, sum: %i[posts score], only: :filter)
+      column(:post_score, sum: %i[posts score], queryable: :filter)
     end
 
     validate_with_result(table, :postScore, 14)
@@ -341,7 +341,7 @@ class TestApiColumnSum < Minitest::Test
 
   def test_sum_only_sort
     table = Prato.table(User) do
-      column(:post_score, sum: %i[posts score], only: :sort)
+      column(:post_score, sum: %i[posts score], queryable: :sort)
     end
 
     validate_with_result(table, :postScore, 14)
@@ -349,7 +349,7 @@ class TestApiColumnSum < Minitest::Test
 
   def test_sum_format_and_only_with_symbol
     table = Prato.table(User) do
-      column(:post_score, sum: %i[posts score], format: ->(value) { value * 20 }, only: :filter)
+      column(:post_score, sum: %i[posts score], format: ->(value) { value * 20 }, queryable: :filter)
     end
 
     validate_with_result(table, :postScore, 280)
@@ -357,7 +357,7 @@ class TestApiColumnSum < Minitest::Test
 
   def test_sum_format_and_only_with_string
     table = Prato.table(User) do
-      column("Post score.", sum: %i[posts score], format: ->(value) { value * 20 }, only: :filter)
+      column("Post score.", sum: %i[posts score], format: ->(value) { value * 20 }, queryable: :filter)
     end
 
     validate_with_result(table, :"Post score.", 280)
@@ -403,7 +403,7 @@ class TestApiColumnAvg < Minitest::Test
 
   def test_avg_only_display
     table = Prato.table(User) do
-      column(:avg_post_score, avg: %i[posts score], only: :display)
+      column(:avg_post_score, avg: %i[posts score], queryable: :none)
     end
 
     validate_avg_result(table, :avgPostScore, 3.5)
@@ -411,7 +411,7 @@ class TestApiColumnAvg < Minitest::Test
 
   def test_avg_only_filter
     table = Prato.table(User) do
-      column(:avg_post_score, avg: %i[posts score], only: :filter)
+      column(:avg_post_score, avg: %i[posts score], queryable: :filter)
     end
 
     validate_avg_result(table, :avgPostScore, 3.5)
@@ -419,7 +419,7 @@ class TestApiColumnAvg < Minitest::Test
 
   def test_avg_only_sort
     table = Prato.table(User) do
-      column(:avg_post_score, avg: %i[posts score], only: :sort)
+      column(:avg_post_score, avg: %i[posts score], queryable: :sort)
     end
 
     validate_avg_result(table, :avgPostScore, 3.5)
@@ -427,7 +427,7 @@ class TestApiColumnAvg < Minitest::Test
 
   def test_avg_format_and_only_with_symbol
     table = Prato.table(User) do
-      column(:avg_post_score, avg: %i[posts score], format: ->(value) { value * 20 }, only: :filter)
+      column(:avg_post_score, avg: %i[posts score], format: ->(value) { value * 20 }, queryable: :filter)
     end
 
     validate_avg_result(table, :avgPostScore, 70)
@@ -435,7 +435,7 @@ class TestApiColumnAvg < Minitest::Test
 
   def test_avg_format_and_only_with_string
     table = Prato.table(User) do
-      column("Avg score.", avg: %i[posts score], format: ->(value) { value * 20 }, only: :filter)
+      column("Avg score.", avg: %i[posts score], format: ->(value) { value * 20 }, queryable: :filter)
     end
 
     validate_avg_result(table, :"Avg score.", 70)
@@ -481,7 +481,7 @@ class TestApiColumnMin < Minitest::Test
 
   def test_min_only_display
     table = Prato.table(User) do
-      column(:min_post_score, min: %i[posts score], only: :display)
+      column(:min_post_score, min: %i[posts score], queryable: :none)
     end
 
     validate_with_result(table, :minPostScore, 2)
@@ -489,7 +489,7 @@ class TestApiColumnMin < Minitest::Test
 
   def test_min_only_filter
     table = Prato.table(User) do
-      column(:min_post_score, min: %i[posts score], only: :filter)
+      column(:min_post_score, min: %i[posts score], queryable: :filter)
     end
 
     validate_with_result(table, :minPostScore, 2)
@@ -497,7 +497,7 @@ class TestApiColumnMin < Minitest::Test
 
   def test_min_only_sort
     table = Prato.table(User) do
-      column(:min_post_score, min: %i[posts score], only: :sort)
+      column(:min_post_score, min: %i[posts score], queryable: :sort)
     end
 
     validate_with_result(table, :minPostScore, 2)
@@ -505,7 +505,7 @@ class TestApiColumnMin < Minitest::Test
 
   def test_min_format_and_only_with_symbol
     table = Prato.table(User) do
-      column(:min_post_score, min: %i[posts score], format: ->(value) { value * 20 }, only: :filter)
+      column(:min_post_score, min: %i[posts score], format: ->(value) { value * 20 }, queryable: :filter)
     end
 
     validate_with_result(table, :minPostScore, 40)
@@ -513,7 +513,7 @@ class TestApiColumnMin < Minitest::Test
 
   def test_min_format_and_only_with_string
     table = Prato.table(User) do
-      column("Min score.", min: %i[posts score], format: ->(value) { value * 20 }, only: :filter)
+      column("Min score.", min: %i[posts score], format: ->(value) { value * 20 }, queryable: :filter)
     end
 
     validate_with_result(table, :"Min score.", 40)
@@ -559,7 +559,7 @@ class TestApiColumnMax < Minitest::Test
 
   def test_max_only_display
     table = Prato.table(User) do
-      column(:max_post_score, max: %i[posts score], only: :display)
+      column(:max_post_score, max: %i[posts score], queryable: :none)
     end
 
     validate_with_result(table, :maxPostScore, 5)
@@ -567,7 +567,7 @@ class TestApiColumnMax < Minitest::Test
 
   def test_max_only_filter
     table = Prato.table(User) do
-      column(:max_post_score, max: %i[posts score], only: :filter)
+      column(:max_post_score, max: %i[posts score], queryable: :filter)
     end
 
     validate_with_result(table, :maxPostScore, 5)
@@ -575,7 +575,7 @@ class TestApiColumnMax < Minitest::Test
 
   def test_max_only_sort
     table = Prato.table(User) do
-      column(:max_post_score, max: %i[posts score], only: :sort)
+      column(:max_post_score, max: %i[posts score], queryable: :sort)
     end
 
     validate_with_result(table, :maxPostScore, 5)
@@ -583,7 +583,7 @@ class TestApiColumnMax < Minitest::Test
 
   def test_max_format_and_only_with_symbol
     table = Prato.table(User) do
-      column(:max_post_score, max: %i[posts score], format: ->(value) { value * 20 }, only: :filter)
+      column(:max_post_score, max: %i[posts score], format: ->(value) { value * 20 }, queryable: :filter)
     end
 
     validate_with_result(table, :maxPostScore, 100)
@@ -591,7 +591,7 @@ class TestApiColumnMax < Minitest::Test
 
   def test_max_format_and_only_with_string
     table = Prato.table(User) do
-      column("Max score.", max: %i[posts score], format: ->(value) { value * 20 }, only: :filter)
+      column("Max score.", max: %i[posts score], format: ->(value) { value * 20 }, queryable: :filter)
     end
 
     validate_with_result(table, :"Max score.", 100)
@@ -639,7 +639,7 @@ class TestApiColumnSingleArgumentHash < Minitest::Test
 
   def test_two_arguments_only_display
     table = Prato.table(User) do
-      column(amazing_name: :name, format: lambda(&:upcase), only: :display)
+      column(amazing_name: :name, format: lambda(&:upcase), queryable: :none)
     end
 
     validate_with_result(table, :amazingName, "ALICE")
@@ -647,7 +647,7 @@ class TestApiColumnSingleArgumentHash < Minitest::Test
 
   def test_two_arguments_only_filter
     table = Prato.table(User) do
-      column(amazing_name: :name, format: lambda(&:upcase), only: :filter)
+      column(amazing_name: :name, format: lambda(&:upcase), queryable: :filter)
     end
 
     validate_with_result(table, :amazingName, "ALICE")
@@ -655,7 +655,7 @@ class TestApiColumnSingleArgumentHash < Minitest::Test
 
   def test_two_arguments_only_sort
     table = Prato.table(User) do
-      column(amazing_name: :name, format: lambda(&:upcase), only: :sort)
+      column(amazing_name: :name, format: lambda(&:upcase), queryable: :sort)
     end
 
     validate_with_result(table, :amazingName, "ALICE")
