@@ -33,7 +33,7 @@ end
 ```
 
 Assuming Book has an association to `author`, `editor`, and `reviews`, this will generate the following result:
-```json lines
+```jsonc
 {
   "entries": [
     {
@@ -73,7 +73,7 @@ we don't have to change any of the backend code.
         - [Filters](#filters)
         - [Sorting](#sorting)
         - [Fields](#fields)
-- [Development](#development-todo)
+- [Development](#development)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -924,7 +924,7 @@ Example request:
 http://localhost:3000/nested-relations.json?query={"fields":["title","classification.categoryName","avgReviewScore"]}
 ```
 
-## Development (TODO)
+## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `bin/run-test-matrix` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
