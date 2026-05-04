@@ -785,7 +785,7 @@ If `per_page` is not present, then the used page size is the one in `Configurati
 If `per_page` is greater than `Configuration.maximum_page_size`, Prato caps it to the configured maximum.
 
 Example Request:
-```http request
+```
 https://prato.trecitano.com/reviews.json?query={"page":2,"per_page":20}
 ```
 Example params:
@@ -839,9 +839,8 @@ that contains an array of:
 
 If `filters` is not present, then no filtering is applied.
 
-```
 Example request: 
-```http request
+```
 http://prato.trecitano.com/nested-relations.json?query={"filters":[{"field":"title","operator":"contains","value":"test2"}]}
 ```
 
@@ -880,7 +879,7 @@ The default parser assumes that the request contains a parameter called "sorts" 
 If "sorts" is not present, then no sorting is applied.
 
 Example request:
-```http request
+```
 http://localhost:3000/nested-relations.json?query={"sorts":[{"field":"title","order":"asc"}]}
 ```
 
@@ -921,7 +920,7 @@ Fields inside sections are referenced with dotted paths:
 Field selection only affects the serialized output. Fields declared with query_column can still be used for filtering or sorting, but are never rendered.
 
 Example request:
-```http request
+```
 http://localhost:3000/nested-relations.json?query={"fields":["title","classification.categoryName","avgReviewScore"]}
 ```
 
