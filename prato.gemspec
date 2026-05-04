@@ -11,8 +11,8 @@ Gem::Specification.new do |spec|
   spec.summary = "Filter, sort, and paginate Active Record queries from a table definition."
   spec.description = <<~DESCRIPTION
 Prato is a library that simplifies the backend code required to support queryable data, 
-by mapping user-provided parameters onto a predefined table structure, allowing Prato
-to invoke Active Record methods like  `.where`, `.order`, `.joins`, `.pluck` and others.
+by mapping parameters onto a table structure, 
+allowing Prato to invoke Active Record methods like  `.where`, `.order`, `.joins`, `.pluck` and others.
 
 The immediate use case for this is fetching data for tables in the frontend, 
 and with a simple *Prato* table, it becomes trivial to provide any kind of filtering / sorting / pagination operations 
