@@ -1,5 +1,7 @@
 # ![Prato](docs/prato_logo.webp)
 
+[Click here to see the interactive demo!](https://prato.trecitano.com/)
+
 Prato is a library that simplifies the backend code required to support queryable data, 
 by mapping user-provided parameters onto a predefined table structure, allowing Prato
 to invoke Active Record methods like  `.where`, `.order`, `.joins`, `.pluck` and others.
@@ -784,7 +786,7 @@ If `per_page` is greater than `Configuration.maximum_page_size`, Prato caps it t
 
 Example Request:
 ```http request
-    https://prato.trecitano.com/reviews.json?query={"page":2,"per_page":20}
+https://prato.trecitano.com/reviews.json?query={"page":2,"per_page":20}
 ```
 Example params:
 ```ruby
